@@ -1540,7 +1540,10 @@ class CoPetition extends AppModel {
     
     // Set for future saveFields
     $this->id = $id;
-    
+
+    // create a cache of OIds for later use
+    $ois=array();
+
     // Obtain a list of attributes that are to be copied to the CO Person (Role) from the Org Identity
     
     $cArgs = array();
@@ -1571,6 +1574,14 @@ class CoPetition extends AppModel {
     $coData = array();
     $coRoleData = array();
     
+    // set enrollmentflow related base data to pass basic validation
+    $requestData['EnrolleeCoPerson']['co_id'] = $petition['CoPetition']['co_id'];
+    $requestData['EnrolleeCoPerson']['status'] = StatusEnum::Pending;
+
+    // if no CoPerson available yet, trick validation using a '0'
+    $requestData['EnrolleeCoPersonRole']['co_person_id'] = empty($coPersonId) ? 0 : $coPersonId;
+    $requestData['EnrolleeCoPersonRole']['status'] = StatusEnum::Pending;
+
     // Validate the provided attributes
     
     $CmpEnrollmentConfiguration = ClassRegistry::init('CmpEnrollmentConfiguration');
@@ -1677,9 +1688,6 @@ class CoPetition extends AppModel {
     }
     
     if(!empty($coData) && !$coPersonId) {
-      // Insert some additional attributes
-      $coData['EnrolleeCoPerson']['co_id'] = $petition['CoPetition']['co_id'];
-      $coData['EnrolleeCoPerson']['status'] = StatusEnum::Pending;
       
       // Save the CO Person Data
       
@@ -1738,9 +1746,8 @@ class CoPetition extends AppModel {
     }
     
     if(!empty($coRoleData) && !$coPersonRoleId) {
-      // Insert some additional attributes
+      // Link the Role to the Person
       $coRoleData['EnrolleeCoPersonRole']['co_person_id'] = $coPersonId;
-      $coRoleData['EnrolleeCoPersonRole']['status'] = StatusEnum::Pending;
       
       // Set the current timezone for CoPersonRole::afterSave
       $this->EnrolleeCoPersonRole->setTimeZone($this->tz);
@@ -1952,7 +1959,10 @@ class CoPetition extends AppModel {
         } else {
           $dbc->rollback();
           throw new RuntimeException(_txt('er.db.save-a', array('CoOrgIdentityLink')));
-        }        
+        }
+
+        // cache the OrgIdentity ID for email matching later on
+        $ois[]=$porgid;
       }
     }
     
@@ -1983,6 +1993,15 @@ class CoPetition extends AppModel {
     // Commit
     $dbc->commit();
     
+    // Check to see if there are any email addresses set to both unverified and verified for the same
+    // set of OIs and CoPersonId. If a user enters the same address as verified through a trusted OIS,
+    // that address can be considered verified without testing
+    if(!empty($orgIdentityId)) {
+      // should never be empty at this stage
+      $ois[]=$orgIdentityId;
+    }
+    $this->EnrolleeCoPerson->EmailAddress->testVerifiedAddresses($ois,$coPersonId);
+
     return true;
   }
   
@@ -2003,8 +2022,8 @@ class CoPetition extends AppModel {
     
     $args = array();
     $args['conditions']['CoPetition.id'] = $id;
-    $args['contain']['CoEnrollmentFlow'] = 'CoEnrollmentFlowApprovalMessageTemplate';
-    $args['contain']['CoEnrollmentFlow'] = 'CoEnrollmentFlowFinMessageTemplate';
+    $args['contain']['CoEnrollmentFlow'][] = 'CoEnrollmentFlowApprovalMessageTemplate';
+    $args['contain']['CoEnrollmentFlow'][] = 'CoEnrollmentFlowFinMessageTemplate';
     $args['contain']['EnrolleeCoPerson'] = array('PrimaryName', 'Identifier');
     $args['contain']['EnrolleeCoPerson']['CoPersonRole'][] = 'Cou';
     $args['contain']['EnrolleeCoPerson']['CoPersonRole']['SponsorCoPerson'][] = 'PrimaryName';
@@ -2210,6 +2229,62 @@ class CoPetition extends AppModel {
   }
   
   /**
+   * Checks for associated email address to find an 'unverified' one
+   *
+   * @since  COmanage Registry vTODO
+   * @param  Integer CO Petition ID
+   * @throws InvalidArgumentException
+   * @return EmailAddress address to be verified, if there are any available
+   *         null         if no associated unverified addresses are available
+   *
+   * Associated in this context means: directly associated with the Enrollee.
+   * We check the EmailAddress belonging to the Enrollee OI and COPerson.
+   * We do not check for linked addresses in any of the OrgIdentityLink records
+   * at this point
+   */
+  public function needConfirmation($id) {
+
+    $args = array();
+    $args['conditions']['CoPetition.id'] = $id;
+    $args['contain']['EnrolleeCoPerson']= array('EmailAddress');
+    $args['contain']['EnrolleeOrgIdentity'] = array('EmailAddress', 'PrimaryName');
+
+    $pt = $this->find('first', $args);
+
+    if(empty($pt)) {
+      throw new InvalidArgumentException(_txt('er.notfound', array(_txt('ct.co_petitions.1'), $id)));
+    }
+    else {
+      // check all email addresses and see if any of those are unverified
+      if(!empty($pt['EnrolleeOrgIdentity']['EmailAddress'])) {
+        foreach($pt['EnrolleeOrgIdentity']['EmailAddress'] as $em) {
+          if(!$em['verified']) {
+            return $em;
+          }
+        }
+      }
+      else {
+        throw new RuntimeException(_txt('er.orgp.nomail',
+                                   array(generateCn($pt['EnrolleeOrgIdentity']['PrimaryName']),
+                                   $pt['EnrolleeOrgIdentity']['id'])));
+      }
+
+      // check all CoPerson related email addresses
+      if(!empty($pt['EnrolleeCoPerson']['EmailAddress'])) {
+        foreach($pt['EnrolleeCoPerson']['EmailAddress'] as $em) {
+          if(!$em['verified']) {
+            return $em;
+          }
+        }
+      }
+    }
+
+    // return null to indicate we did not find any unverified email addresses
+
+    return null;
+  }
+
+  /**
    * Send a confirmation (invite) for a Petition.
    * - postcondition: Invite sent
    *
@@ -2220,40 +2295,20 @@ class CoPetition extends AppModel {
    * @return String Address the invitation was sent to
    */
   
-  public function sendConfirmation($id, $actorCoPersonId) {
+  public function sendConfirmation($id, $ea, $actorCoPersonId) {
     // Just let any exceptions fall through
-    
+
     $args = array();
     $args['conditions']['CoPetition.id'] = $id;
     $args['contain']['EnrolleeCoPerson'][] = 'PrimaryName';
     $args['contain']['EnrolleeCoPerson']['CoPersonRole'][] = 'Cou';
     $args['contain']['EnrolleeCoPerson']['CoPersonRole']['SponsorCoPerson'][] = 'PrimaryName';
-    $args['contain']['EnrolleeOrgIdentity'] = array('EmailAddress', 'PrimaryName');
+    $args['contain']['EnrolleeOrgIdentity'] = array('PrimaryName');
     
     $pt = $this->find('first', $args);
     
     if(empty($pt)) {
       throw new InvalidArgumentException(_txt('er.notfound', array(_txt('ct.co_petitions.1'), $id)));
-    }
-    
-    if(empty($pt['EnrolleeOrgIdentity']['EmailAddress'])) {
-      throw new RuntimeException(_txt('er.orgp.nomail',
-                                      array(generateCn($pt['EnrolleeOrgIdentity']['PrimaryName']),
-                                            $pt['EnrolleeOrgIdentity']['id'])));
-    }
-    
-    $toEmail = null;
-    
-    // Which email do we pick? Ultimately we could look at type and/or verified,
-    // but for now we'll just pick the first one. sendApprovalNotification does similar.
-    // Note array_shift will muck with $pt, but we don't need it anymore.
-    
-    $ea = array_shift($pt['EnrolleeOrgIdentity']['EmailAddress']);
-    
-    if(empty($ea['mail'])) {
-      throw new RuntimeException(_txt('er.orgp.nomail',
-                                      array(generateCn($pt['EnrolleeOrgIdentity']['PrimaryName']),
-                                            $pt['EnrolleeOrgIdentity']['id'])));
     }
     
     $toEmail = $ea['mail'];
@@ -2314,7 +2369,7 @@ class CoPetition extends AppModel {
                                         $ef['Co']['name'],
                                         $subject,
                                         $body,
-                                        null,
+                                        $ea['id'],
                                         $ef['CoEnrollmentFlow']['invitation_validity'],
                                         $cc,
                                         $bcc,
@@ -2939,6 +2994,7 @@ class CoPetition extends AppModel {
       // missing) related models.
       $errFields = $this->$pmodel->invalidFields();
       
+      $fail = false;
       if(!empty($errFields)) {
         $fail = true;
       }
@@ -2947,7 +3003,7 @@ class CoPetition extends AppModel {
       
       $v = $this->validateRelated($pmodel, $requestData, $ret, $efAttrs);
       
-      if($v) {
+      if($v && !$fail) {
         $ret = $v;
       } else {
         throw new RuntimeException(_txt('er.validation'));
@@ -3161,5 +3217,34 @@ class CoPetition extends AppModel {
     } else {
       return $ret;
     }
+  }
+
+  /**
+   * Ensure an enrollee token exists
+   *
+   * @since  COmanage Registry vTODO
+   * @param  id   CoPetition model id
+   */
+
+  public function ensureEnrolleeToken($id) {
+    $args=array();
+    $args['conditions']['CoPetition.id']=$id;
+    $model = $this->find('first', $args);
+
+    $token=null;
+    // if model is empty, disregard the request instead of throwing exceptions
+    if(!empty($model) && !empty($model['CoPetition'])) {
+      if(empty($model['CoPetition']['enrollee_token'])) {
+
+        $token = Security::generateAuthKey();
+        $this->id = $id;
+        $this->saveField('enrollee_token', $token);
+      }
+      else {
+        $token = $model['CoPetition']['enrollee_token'];
+      }
+    }
+
+    return $token;
   }
 }

@@ -140,7 +140,22 @@ class CoInvitesController extends AppController {
                                                       filter_var($this->request->params['pass'][0],FILTER_SANITIZE_SPECIAL_CHARS))));
       }
     }
-    
+    else if($this->action == "verifyEmailAddress") {
+      // verifyEmailAddress has an email address id as parameter. Use that to determine the CO
+
+      if(!empty($this->request->params['named']['email_address_id'])) {
+        $args = array();
+        $args['conditions']['EmailAddress.id'] = $this->request->params['named']['email_address_id'];
+        $args['contain'] = array('CoPerson');
+
+        $ea = $this->CoInvite->CoPerson->EmailAddress->find('first', $args);
+
+        if(!empty($ea) && !empty($ea['CoPerson'])) {
+          return $ea['CoPerson']['co_id'];
+        }
+      }
+    }
+
     if($this->action == "send" && !empty($this->request->params['named']['copersonid'])) {
       $coId = $this->CoInvite->CoPerson->field('co_id',
                                                array('id' => $this->request->params['named']['copersonid']));
@@ -371,13 +386,7 @@ class CoInvitesController extends AppController {
         // supported enrollment flow involves a new Org Identity for the CO, so
         // there won't be an existing CO Person identity linked to use instead.
         // At some point (ie: additional Role enrollment; CO-310) this will change.
-        
-        $token = Security::generateAuthKey();
-        
-        $this->CoInvite->CoPetition->id = $invite['CoPetition']['id'];
-        $this->CoInvite->CoPetition->saveField('enrollee_token', $token);
-        
-        $redirect['token'] = $token;
+        $redirect['token'] = $this->CoInvite->CoPetition->ensureEnrolleeToken($invite['CoPetition']['id']);
         
         $this->redirect($redirect);
       } elseif(!empty($invite['CoInvite']['email_address_id'])) {
@@ -386,9 +395,26 @@ class CoInvitesController extends AppController {
         $this->Flash->set($confirm ? _txt('rs.inv.conf') : _txt('rs.inv.dec'), array('key' => 'success'));
       }
       
-      // If a login identifier was provided, force a logout
+      // If a login identifier was provided, redirect to a meaningful page
       if($loginIdentifier) {
-        $this->redirect("/auth/logout");
+        if(!empty($invite['CoInvite']['email_address_id'])) {
+          // if we confirmed an address, review the final result
+
+          $redirect = array(
+            'controller' => 'email_addresses',
+            'action'     => 'view',
+            $invite['CoInvite']['email_address_id']
+          );
+        } else {
+          // Else review the user information
+
+          $redirect = array(
+            'controller' => 'co_people',
+            'action'     => 'canvas',
+            $invite['CoInvite']['co_person_id']
+          );
+        }
+        $this->redirect($redirect);
       } else {
         $this->redirect("/");
       }
