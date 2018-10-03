@@ -1487,7 +1487,9 @@ class CoPetition extends AppModel {
       throw new RuntimeException(_txt('er.db.save'));
     }
     
-    return $this->sendConfirmation($id, $actorCoPersonId);
+    // find the unconfirmed address we need to resend the invite to
+    $ea = $this->needConfirmation($id);
+    return $this->sendConfirmation($id, $ea, $actorCoPersonId);
   }
 
   /**
@@ -2290,6 +2292,7 @@ class CoPetition extends AppModel {
    *
    * @since  COmanage Registry v0.9.4
    * @param  Integer CO Petition ID
+   * @param  Array   ea EmailAddress entry to resend to
    * @param  Integer CO Person ID of actor sending the invite
    * @throws InvalidArgumentException
    * @return String Address the invitation was sent to
