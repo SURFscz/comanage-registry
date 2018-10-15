@@ -696,7 +696,6 @@ class CoEnrollmentAttribute extends AppModel {
             
             // Create a selection field if the validation rule has a limited set
             // Make an exception for the SshKey type field
-            CakeLog::write('debug','testing attribute field '.$k.': '.json_encode($attr));
             if(($k != 'type' || $attrName == 'ssh_key')
                && isset($attr['validate']['content']['rule'][0])
                && $attr['validate']['content']['rule'][0] == 'inList') {
