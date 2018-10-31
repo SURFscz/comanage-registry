@@ -32,32 +32,234 @@ class CoDashboardsController extends StandardController {
   public $name = "CoDashboards";
   
   // Establish pagination parameters for HTML views
-  /*
+  
   public $paginate = array(
     'limit' => 25,
     'order' => array(
-      'CoDashbord.description' => 'asc'
+      'CoDashbord.name' => 'asc'
     )
   );
-  */
   
   // This controller needs a CO to be set
   public $requires_co = true;
   
-  public $uses = array(
-    'Address',
-    'CoDepartment',
-    'CoEmailList',
-    'CoEnrollmentFlow',
-    'CoGroup',
-    'CoPersonRole',
-    'CoService',
-    'EmailAddress',
-    'Identifier',
-    'Name',
-    'TelephoneNumber'
-  );
+  /**
+   * Callback before other controller methods are invoked or views are rendered.
+   * - postcondition: Auth component is configured
+   *
+   * @since  COmanage Registry v2.0.0
+   * @throws UnauthorizedException (REST)
+   */
 
+  function beforeFilter() {
+    parent::beforeFilter();
+
+    if($this->action == 'dashboard') {
+      // We may or may not have a current CO Person ID
+      $coPersonId = $this->Session->read('Auth.User.co_person_id');
+      
+      if($this->action == 'dashboard'
+         && !empty($this->request->params['pass'][0])) {
+        // If this dashboard allows unauthenticated users, we need to allow the view
+        $visibility = $this->CoDashboard->field('visibility', array('CoDashboard.id' => $this->request->params['pass'][0]));
+        
+        if($visibility && $visibility == VisibilityEnum::Unauthenticated) {
+          $this->Auth->allow('dashboard');
+        }
+      }
+    }
+  }
+  
+  /**
+   * Callback after controller methods are invoked but before views are rendered.
+   * - precondition: Request Handler component has set $this->request->params
+   *
+   * @since  COmanage Registry v3.2.0
+   */
+
+  function beforeRender() {
+    if(!$this->request->is('restful')) {
+      // Pull the list of available CO Groups
+      $args = array();
+      $args['conditions']['CoGroup.co_id'] = $this->cur_co['Co']['id'];
+      $args['conditions']['CoGroup.status'] = SuspendableStatusEnum::Active;
+      $args['order'] = array('CoGroup.name ASC');
+
+      $this->set('vv_co_groups', $this->Co->CoGroup->find("list", $args));
+    }
+
+    parent::beforeRender();
+  }
+  
+  /**
+   * Render the CO Configuration Dashboard.
+   *
+   * @since  COmanage Registry v3.0.0
+   */
+
+  public function configuration() {
+    $this->set('title_for_layout', _txt('op.dashboard.configuration', array($this->cur_co['Co']['name'])));
+  }
+  
+  /**
+   * Render the CO Dashboard.
+   *
+   * @since  COmanage Registry v0.9.2
+   * @param  Integer CO Dashboard ID
+   */
+
+  public function dashboard($id=null) {
+    $dashboardid = $id;
+    
+    if(!$dashboardid) {
+      // Check CO Settings to see if we have a default dashboard for the current CO
+      
+      $dashboardid = $this->Co->CoSetting->field('co_dashboard_id', array('CoSetting.co_id' => $this->cur_co['Co']['id']));
+    }
+    
+    if($dashboardid) {
+      // Pull the dashboard configuration
+      
+      // Bind the plugins so we can get their instantiated configuration
+      $plugins = $this->loadAvailablePlugins('dashboardwidget', 'simple');
+      $pcontain = array();
+      
+      foreach($plugins as $plugin) {
+        $this->CoDashboard->CoDashboardWidget->bindModel(
+          array('hasOne' => array($plugin.".Co".$plugin => array('dependent' => true))
+        ));
+        
+        $pcontain[] = "Co".$plugin;
+        $this->loadModel($plugin.".Co".$plugin);
+      }
+      
+      $args = array();
+      $args['conditions']['CoDashboard.id'] = $dashboardid;
+      $args['conditions']['CoDashboard.status'] = StatusEnum::Active;
+      $args['contain'][] = 'CoDashboardWidget';
+      // This doesn't work because the widget model is not (necessarily) Changelog enabled.
+      //$args['contain']['CoDashboardWidget'] = $pcontain;
+      
+      $db = $this->CoDashboard->find('first', $args);
+      
+      if(empty($db)) {
+        $this->Flash->set(_txt('er.notfound', array(_txt('ct.co_dashboards.1'), $dashboardid)), array('key' => 'error'));
+        // Not sure exactly where we should go...
+        $this->performRedirect();
+      }
+      
+      // Pull the widget configuration separately, since contain() doesn't get it
+      for($i = 0;$i < count($db['CoDashboardWidget']);$i++) {
+        if($db['CoDashboardWidget'][$i]['status'] == StatusEnum::Active) {
+          $plmodel = "Co".$db['CoDashboardWidget'][$i]['plugin'];
+          
+          $args = array();
+          $args['conditions'][$plmodel.".co_dashboard_widget_id"] = $db['CoDashboardWidget'][$i]['id'];
+          $args['contain'] = false;
+          
+          $dbw = $this->$plmodel->find('first', $args);
+          
+          $db['CoDashboardWidget'][$i][$plmodel] = $dbw[$plmodel];
+        }
+      }
+      
+      $this->set('vv_dashboard', $db);
+      $this->set('title_for_layout', $db['CoDashboard']['name']);
+    } else {
+      $this->set('title_for_layout', $this->cur_co['Co']['name']);
+    }
+    
+    // Pull the list of visible dashboards
+    
+    $args = array();
+    $args['conditions']['CoDashboard.co_id'] = $this->cur_co['Co']['id'];
+    $args['conditions']['CoDashboard.status'] = StatusEnum::Active;
+    $args['contain'] = false;
+    
+    $dbs = $this->CoDashboard->find('all', $args);
+    
+    // Filter the list on visibility
+    $avail = array();
+    
+    foreach($dbs as $db) {
+      if($this->CoDashboard->authorize($db,
+                                       $this->Session->read('Auth.User.co_person_id'),
+                                       $this->Role)) {
+        $avail[ $db['CoDashboard']['id'] ] = $db['CoDashboard']['name'];
+      }
+    }
+    
+    $this->set('vv_available_dashboards', $avail);
+  }
+  
+  /**
+   * Authorization for this Controller, called by Auth component
+   * - precondition: Session.Auth holds data used for authz decisions
+   * - postcondition: $permissions set with calculated permissions
+   *
+   * @since  COmanage Registry v0.9.2
+   * @return Array Permissions
+   */
+  
+  function isAuthorized() {
+    $roles = $this->Role->calculateCMRoles();
+    
+    // Construct the permission set for this user, which will also be passed to the view.
+    $p = array();
+    
+    // Determine what operations this user can perform
+    
+    // Add a new Dashboard?
+    $p['add'] = ($roles['cmadmin'] || $roles['coadmin']);
+    
+    // Lock down the configuration dashboard to only cmadmin and coadmin for now (might change in future)
+    $p['configuration'] = ($roles['cmadmin'] || $roles['coadmin']);
+    
+    // View the dashboard for the specified CO?
+    
+    if(!empty($this->request->params['pass'][0])) {
+      // We need to check the permissions for the given Dashboard.
+      
+      $args = array();
+      $args['conditions']['CoDashboard.id'] = $this->request->params['pass'][0];
+      $args['contain'] = false;
+      
+      $db = $this->CoDashboard->find('first', $args);
+      
+      if(!empty($db)) {
+        $p['dashboard'] = $this->CoDashboard->authorize($db, 
+                                                        $this->Session->read('Auth.User.co_person_id'),
+                                                        $this->Role);
+      } else {
+        $p['dashboard'] = false;
+      }
+    } else {
+      // The default dashboard. Since this is the landing page for the CO, it's visible
+      // to any registered CO Person. (However the widgets will honor the dashboard's
+      // visibility, and so the content of the dashboard might not render.)
+      
+      $p['dashboard'] = ($roles['cmadmin'] || $roles['coadmin'] || $roles['comember']);
+    }
+    
+    // Delete an existing Dashboard?
+    $p['delete'] = ($roles['cmadmin'] || $roles['coadmin']);
+    
+    // Edit an existing Dashboard?
+    $p['edit'] = ($roles['cmadmin'] || $roles['coadmin']);
+    
+    // View all existing Dashboards?
+    $p['index'] = ($roles['cmadmin'] || $roles['coadmin']);
+    
+    // Execute a cross-model search?
+    $p['search'] = ($roles['cmadmin'] || $roles['coadmin'] || $roles['comember']);
+
+    // View an existing Dashboard?
+    $p['view'] = ($roles['cmadmin'] || $roles['coadmin']);
+    
+    $this->set('permissions', $p);
+    return $p[$this->action];
+  }
+  
   /**
    * For Models that accept a CO ID, find the provided CO ID.
    * - precondition: A coid must be provided in $this->request (params or data)
@@ -83,58 +285,6 @@ class CoDashboardsController extends StandardController {
   }
   
   /**
-   * Render the CO Dashboard.
-   *
-   * @since  COmanage Registry v0.9.2
-   */
-
-  public function dashboard() {
-    // XXX implement this
-
-    $this->set('title_for_layout', $this->cur_co['Co']['name']);
-  }
-
-  /**
-   * Render the CO Configuration Dashboard.
-   *
-   * @since  COmanage Registry v3.0.0
-   */
-
-  public function configuration() {
-    $this->set('title_for_layout', _txt('op.dashboard.configuration', array($this->cur_co['Co']['name'])));
-  }
-
-  /**
-   * Authorization for this Controller, called by Auth component
-   * - precondition: Session.Auth holds data used for authz decisions
-   * - postcondition: $permissions set with calculated permissions
-   *
-   * @since  COmanage Registry v0.9.2
-   * @return Array Permissions
-   */
-  
-  function isAuthorized() {
-    $roles = $this->Role->calculateCMRoles();
-    
-    // Construct the permission set for this user, which will also be passed to the view.
-    $p = array();
-    
-    // Determine what operations this user can perform
-    
-    // Lock down the configuration dashboard to only cmadmin and coadmin for now (might change in future)
-    $p['configuration'] = ($roles['cmadmin'] || $roles['coadmin']);
-    
-    // View the dashboard for the specified CO?
-    $p['dashboard'] = ($roles['cmadmin'] || $roles['coadmin'] || $roles['comember']);
-    
-    // Execute a cross-model search?
-    $p['search'] = ($roles['cmadmin'] || $roles['coadmin'] || $roles['comember']);
-
-    $this->set('permissions', $p);
-    return $p[$this->action];
-  }
-  
-  /**
    * Perform a cross model search.
    *
    * @since  COmanage Registry v3.1.0
@@ -143,6 +293,7 @@ class CoDashboardsController extends StandardController {
   public function search() {
     $results = array();
     $roles = array();
+    $models = array();
     
     if(!empty($this->request->query['q'])) {
       /* To add a new backend to search:
@@ -168,6 +319,25 @@ class CoDashboardsController extends StandardController {
         'TelephoneNumber' => array('cmadmin', 'coadmin', 'couadmin'),
       );
       
+      // Determine which plugin models are searchable
+      $plugins = $this->loadAvailablePlugins('all', 'simple');
+      
+      // And track the display fields for the view
+      $pdisplay = array();
+
+      foreach($plugins as $plugin) {
+        if(method_exists($this->$plugin, 'cmPluginSearchModels')) {
+          $pSearchInfo = $this->$plugin->cmPluginSearchModels();
+          
+          foreach($pSearchInfo as $pmodel => $pcfg) {
+            $models[$pmodel] = $pcfg['permissions'];
+            $pdisplay[$pmodel] = $pcfg['displayField'];
+          }
+        }
+      }
+      
+      $this->set('vv_plugin_display_fields', $pdisplay);
+      
       // Which models we search depends on our permissions
       
       $roles = $this->Role->calculateCMRoles();
@@ -183,10 +353,17 @@ class CoDashboardsController extends StandardController {
         }
         
         if($authorized) {
-          // Query backend
+          // Query backend, first making sure we've loaded the model.
+          // (We can't use $this->uses since it breaks index().)
           
-          $results[$m] = $this->$m->search($this->cur_co['Co']['id'],
-                                           $this->request->query['q']);
+          $this->loadModel($m);
+          
+          // If we're searching a plugin model, we need the base name of the 
+          // model itself (not the full plugin.model name)
+          $smodel = preg_replace('/.*\./', '', $m);
+          
+          $results[$m] = $this->$smodel->search($this->cur_co['Co']['id'],
+                                                $this->request->query['q']);
         }
       }
     }
@@ -238,7 +415,30 @@ class CoDashboardsController extends StandardController {
       // Otherwise redirect to the model's view. We don't really know if the current
       // person can edit or just view, so if they're an admin we redirect them to edit
       // otherwise view.
+      
+      $plugin = null;
+      
+      if(!isset($models[$matchModel])) {
+        // This is probably a plugin model, so we need to walk through the list
+        // of models looking for the right one
+        
+        foreach($models as $m => $d) {
+          if(strpos($m, '.')) {
+            // We have something of the form Plugin.Model
+            
+            $ms = explode('.', $m, 2);
+            
+            if($ms[1] == $matchModel) {
+              // This is the right plugin
+              $plugin = Inflector::underscore($ms[0]);
+              break;
+            }
+          }
+        }
+      }
+      
       $args = array(
+        'plugin'     => $plugin,
         'controller' => Inflector::tableize($matchModel),
         'action'     => ((isset($roles['cmadmin']) && $roles['cmadmin'])
                          || (isset($roles['coadmin']) && $roles['coadmin'])

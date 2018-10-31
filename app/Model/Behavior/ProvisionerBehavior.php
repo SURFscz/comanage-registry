@@ -473,7 +473,17 @@ class ProvisionerBehavior extends ModelBehavior {
         $this->provisionPeople($model, $pmodel, $coPersonIds, $created, $provisioningAction);
       }
       if($gmodel) {
-        $this->provisionGroups($model, $gmodel, $coGroupIds, $created, $provisioningAction, $copid);
+        // If $provisioningAction is CoPersonReprovisionRequested, switch the action
+        // to CoGroupReprovisionRequested so plugins get a more coherent action.
+        
+        $this->provisionGroups($model, 
+                               $gmodel,
+                               $coGroupIds, 
+                               $created, 
+                               ($provisioningAction == ProvisioningActionEnum::CoPersonReprovisionRequested
+                                ? ProvisioningActionEnum::CoGroupReprovisionRequested
+                                : $provisioningAction), 
+                               $copid);
       }
     }
     
@@ -498,8 +508,10 @@ class ProvisionerBehavior extends ModelBehavior {
     // Before we do anything else, see if this plugin is configured to only operate
     // on a specified group. We do this here rather than in marshallXData because
     // here we have access to the plugin configuration, and the action change is not
-    // too intrusive. If we need to do more sophisticate manipulation of the provisioning
+    // too intrusive. If we need to do more sophisticated manipulation of the provisioning
     // data we should move this to marshallXData.
+    
+    // Note there is similar logic in View/Standard/provision.ctp.
     
     if(!empty($coProvisioningTarget['provision_co_group_id'])) {
       if(!empty($provisioningData['CoPerson']['id'])) { 
@@ -518,6 +530,19 @@ class ProvisionerBehavior extends ModelBehavior {
         // Switch to a delete. We'll leave the provisioning data itself untouched.
         $pAction = ProvisioningActionEnum::CoGroupDeleted;
       }
+    }
+    
+    // Perform a similar check to see if there is an associated Org Identity Source
+    // record that indicates we should skip provisioning.
+    
+    if(!empty($coProvisioningTarget['skip_org_identity_source_id'])
+       &&
+       !empty($provisioningData['CoPerson']['id'])
+       &&
+       in_array($coProvisioningTarget['skip_org_identity_source_id'],
+                Hash::extract($provisioningData, 'CoOrgIdentityLink.{n}.OrgIdentity.OrgIdentitySourceRecord.org_identity_source_id'))) {
+      // Switch to a delete. We'll leave the provisioning data itself untouched.
+      $pAction = ProvisioningActionEnum::CoGroupDeleted;
     }
     
     if(!empty($coProvisioningTarget['plugin'])) {
@@ -661,7 +686,11 @@ class ProvisionerBehavior extends ModelBehavior {
     // Pull the Provisioning Targets for this CO. We use the CO ID from $provisioningData.
     
     $args = array();
-    $args['conditions']['CoProvisioningTarget.status'] = ProvisionerStatusEnum::AutomaticMode;
+    $args['conditions']['CoProvisioningTarget.status'] = array(ProvisionerStatusEnum::AutomaticMode);
+    if($action == ProvisioningActionEnum::CoPersonPetitionProvisioned) {
+      // Also run provisioners in Enrollment Mode
+      $args['conditions']['CoProvisioningTarget.status'][] = ProvisionerStatusEnum::EnrollmentMode;
+    }
     if(isset($provisioningData[ $model->name ]['co_id'])) {
       $args['conditions']['CoProvisioningTarget.co_id'] = $provisioningData[ $model->name ]['co_id'];
     } else {
@@ -721,6 +750,7 @@ class ProvisionerBehavior extends ModelBehavior {
    * @param  integer $coGroupId CO Group to (re)provision
    * @param  ProvisioningActionEnum $provisioningAction Provisioning action to pass to plugins
    * @param  integer $coEmailListId CO Email List to (re)provision
+   * @param  integer $coGroupMemberId CO Group Member to (re)provision
    * @return boolean true on success, false on failure
    * @throws InvalidArgumentException
    * @throws RuntimeException
@@ -731,7 +761,8 @@ class ProvisionerBehavior extends ModelBehavior {
                                   $coPersonId,
                                   $coGroupId=null,
                                   $provisioningAction=ProvisioningActionEnum::CoPersonReprovisionRequested,
-                                  $coEmailListId=null) {
+                                  $coEmailListId=null,
+                                  $coGroupMemberId=null) {
     // First marshall the provisioning data
     $provisioningData = array();
     
@@ -750,6 +781,8 @@ class ProvisionerBehavior extends ModelBehavior {
         // $model = CoEmailList
         $provisioningData = $this->marshallCoEmailListData($model, $coEmailListId);
       }
+      // XXX We don't currently support manual provisioning of 
+      // CoGroupMember+coProvisioningTargetId because we don't have a use case
       
       // Find the associated Provisioning Target record
       
@@ -789,6 +822,10 @@ class ProvisionerBehavior extends ModelBehavior {
         $model->id = $coPersonId;
       } elseif($model->name == 'CoGroup' && $coGroupId) {
         $model->id = $coGroupId;
+      } elseif($model->name == 'CoGroupMember' && $coGroupMemberId) {
+        $model->id = $coGroupMemberId;
+      } elseif($model->name == 'CoEmailList' && $coEmailListId) {
+        $model->id = $coEmailListId;
       }
       
       return $this->determineProvisioning($model, false, $provisioningAction);
@@ -845,6 +882,8 @@ class ProvisionerBehavior extends ModelBehavior {
       $person = $coGroupModel->Co->CoPerson->find('first', $args);
       
       if(!empty($person)) {
+        // XXX Do we need to remove CoGroupMembers with invalid dates here?
+        // Need a test case...
         $group['CoGroup'] = array_merge($group['CoGroup'], $person);
       }
     }
@@ -871,16 +910,17 @@ class ProvisionerBehavior extends ModelBehavior {
       'CoGroupMember' => array('CoGroup' => array('EmailListAdmin', 'EmailListMember', 'EmailListModerator')),
       // 'CoGroup'
       // 'CoGroupMember.CoGroup',
-      'CoOrgIdentityLink' => array('OrgIdentity' => array('Identifier')),
+      'CoOrgIdentityLink' => array('OrgIdentity' => array('Identifier', 'OrgIdentitySourceRecord')),
       //'CoOrgIdentityLink',
       // We normally don't pull org identity data, but we'll make an exception
       // for Identifier to be able to expose eppn
       //'CoOrgIdentityLink.OrgIdentity.Identifier',
-      'CoPersonRole' => array('Address', 'Cou', 'TelephoneNumber'),
+      'CoPersonRole' => array('Address', 'Cou', 'TelephoneNumber', 'order' => 'CoPersonRole.ordr ASC'),
       //'CoPersonRole',
       //'CoPersonRole.Address',
       //'CoPersonRole.Cou',
       //'CoPersonRole.TelephoneNumber',
+      'CoTAndCAgreement' => array('CoTermsAndConditions'),
       'EmailAddress',
       'Identifier',
       'Name',
@@ -991,7 +1031,8 @@ class ProvisionerBehavior extends ModelBehavior {
       }
     }
     
-    // Remove any inactive groups (ie: memberships attached to inactive groups)
+    // Remove any inactive groups (ie: memberships attached to inactive groups
+    // or those not within the validity window).
     
     if(!empty($coPersonData['CoGroupMember'])) {
       for($i = (count($coPersonData['CoGroupMember']) - 1);$i >= 0;$i--) {
@@ -1008,7 +1049,13 @@ class ProvisionerBehavior extends ModelBehavior {
         
         if(!in_array($coPersonData[$coPersonModel->alias]['status'], $this->groupStatuses)
            ||
-           $coPersonData['CoGroupMember'][$i]['CoGroup']['status'] != StatusEnum::Active) {
+           $coPersonData['CoGroupMember'][$i]['CoGroup']['status'] != StatusEnum::Active
+           ||
+           (!empty($coPersonData['CoGroupMember'][$i]['valid_from'])
+            && strtotime($coPersonData['CoGroupMember'][$i]['valid_from']) >= time())
+           ||
+           (!empty($coPersonData['CoGroupMember'][$i]['valid_through'])
+            && strtotime($coPersonData['CoGroupMember'][$i]['valid_through']) < time())) {
           unset($coPersonData['CoGroupMember'][$i]);
         }
       }
@@ -1135,6 +1182,10 @@ class ProvisionerBehavior extends ModelBehavior {
         syslog(LOG_ERR, $e->getMessage());
         //throw new RuntimeException($e->getMessage());
       }
+      catch(Exception $e) {
+        syslog(LOG_ERR, $e->getMessage());
+        //throw new RuntimeException($e->getMessage());
+      }
     }
     
     return true;
@@ -1220,6 +1271,10 @@ class ProvisionerBehavior extends ModelBehavior {
         //throw new InvalidArgumentException($e->getMessage());
       }
       catch(RuntimeException $e) {
+        syslog(LOG_ERR, $e->getMessage());
+        //throw new RuntimeException($e->getMessage());
+      }
+      catch(Exception $e) {
         syslog(LOG_ERR, $e->getMessage());
         //throw new RuntimeException($e->getMessage());
       }

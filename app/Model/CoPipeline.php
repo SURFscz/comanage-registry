@@ -145,11 +145,12 @@ class CoPipeline extends AppModel {
    * @param  SyncActionEnum $syncAction Add, Update, or Delete
    * @param  Integer $actorCoPersonId CO Person ID of actor, if interactive
    * @param  Boolean $provision Whether to execute provisioning
+   * @param  String  $oisRawRecord If the Org Identity came from an Org Identity Source, the raw record
    * @return Boolean True on success
    * @throws InvalidArgumentException
    */
   
-  public function execute($id, $orgIdentityId, $syncAction, $actorCoPersonId=null, $provision=true) {
+  public function execute($id, $orgIdentityId, $syncAction, $actorCoPersonId=null, $provision=true, $oisRawRecord=null) {
     // Make sure we have a valid action
     
     if(!in_array($syncAction, array(SyncActionEnum::Add,
@@ -226,7 +227,7 @@ class CoPipeline extends AppModel {
        && !empty($pipeline['CoPipeline']['sync_status_on_delete'])) {
       $this->processDelete($pipeline, $orgIdentityId, $actorCoPersonId, $provision);
     } else {
-      $this->syncOrgIdentityToCoPerson($pipeline, $orgIdentity, $coPersonId, $actorCoPersonId, $provision);
+      $this->syncOrgIdentityToCoPerson($pipeline, $orgIdentity, $coPersonId, $actorCoPersonId, $provision, $oisRawRecord);
     }
     
     if($syncAction == SyncActionEnum::Add) {
@@ -482,16 +483,21 @@ class CoPipeline extends AppModel {
    * sync actions.
    *
    * @since  COmanage Registry v2.0.0
-   * @param  Array $coPipeline Array of CO Pipeline configuration
-   * @param  Array $orgIdentity Array of Org Identity data and related models
+   * @param  Array   $coPipeline       Array of CO Pipeline configuration
+   * @param  Array   $orgIdentity      Array of Org Identity data and related models
    * @param  Integer $targetCoPersonId Target CO Person ID, if known
-   * @param  Integer $actorCoPersonId CO Person ID of actor
-   * @param  Boolean $provision Whether to trigger provisioning
+   * @param  Integer $actorCoPersonId  CO Person ID of actor
+   * @param  Boolean $provision        Whether to trigger provisioning
+   * @param  String  $oisRawRecord     If the Org Identity came from an Org Identity Source, the raw record
    * @return Boolean true, on success
    */
   
-  protected function syncOrgIdentityToCoPerson($coPipeline, $orgIdentity, $targetCoPersonId=null, $actorCoPersonId=null,
-                                               $provision=true) {
+  protected function syncOrgIdentityToCoPerson($coPipeline, 
+                                               $orgIdentity, 
+                                               $targetCoPersonId=null, 
+                                               $actorCoPersonId=null,
+                                               $provision=true,
+                                               $oisRawRecord=null) {
     $coPersonId = $targetCoPersonId;
     $coPersonRoleId = null;
     $doProvision = false; // We did something provision-worthy
@@ -912,11 +918,13 @@ class CoPipeline extends AppModel {
     // If the OrgIdentity came from an OIS, see if there are mapped group memberships
     $memberGroups = array();
     
+    // We need the raw record pass in vs pulling it from OrgIdentitySourceRecord
+    // because the letter may have a hashed version that we can't parse.
     if(!empty($orgIdentity['OrgIdentitySourceRecord']['org_identity_source_id'])
-       && !empty($orgIdentity['OrgIdentitySourceRecord']['source_record'])) {
+       && !empty($oisRawRecord)) {
       $groupAttrs = $this->OrgIdentitySource
                          ->resultToGroups($orgIdentity['OrgIdentitySourceRecord']['org_identity_source_id'],
-                                          $orgIdentity['OrgIdentitySourceRecord']['source_record']);
+                                          $oisRawRecord);
       $mappedGroups = $this->OrgIdentitySource
                            ->CoGroupOisMapping
                            ->mapGroups($orgIdentity['OrgIdentitySourceRecord']['org_identity_source_id'],
@@ -937,8 +945,7 @@ class CoPipeline extends AppModel {
       // multiple memberships in the same group. So we only add a membership if there
       // is no existing membership (not if there is no existing membership linked
       // to this pipeline), and we only delete memberships linked to this pipeline
-      // if there is no longer eligibility. (There is currently no "update" concept,
-      // eg member to owner.)
+      // if there is no longer eligibility.
       
       // Start by pulling the list of current group memberships.
       
@@ -952,13 +959,18 @@ class CoPipeline extends AppModel {
       // For each mapped group membership, create the membership if it doesn't exist
       
       foreach($memberGroups as $gm) {
-        if(!Hash::check($curGroupMemberships, '{n}.CoGroupMember[co_group_id='.$gm['CoGroup']['id'].'].id')) {
+        $curGm = Hash::extract($curGroupMemberships, '{n}.CoGroupMember[co_group_id='.$gm['CoGroup']['id'].']');
+        
+        if(!$curGm) {
+          // Create a membership
           $newGroupMember = array(
             'CoGroupMember' => array(
               'co_group_id'            => $gm['CoGroup']['id'],
               'co_person_id'           => $coPersonId,
               'member'                 => true,
               'owner'                  => false,
+              'valid_from'             => $mappedGroups[ $gm['CoGroup']['id'] ]['valid_from'],
+              'valid_through'          => $mappedGroups[ $gm['CoGroup']['id'] ]['valid_through'],
               'source_org_identity_id' => $orgIdentity['OrgIdentity']['id']
             )
           );
@@ -992,6 +1004,61 @@ class CoPipeline extends AppModel {
                                                      $gm['CoGroup']['id']);
           
           $doProvision = true;
+        } else {
+          // Make sure validity dates are in sync. We could do a role check here too
+          // but we don't currently support anything other than member. Note we only
+          // update group memberships from our source identity, so if the person was
+          // manually added to a group we won't updated it.
+          
+          if($curGm[0]['source_org_identity_id'] == $orgIdentity['OrgIdentity']['id']) {
+            // For now we just check valid from/through`
+            if(($curGm[0]['valid_from'] != $mappedGroups[ $curGm[0]['co_group_id'] ]['valid_from'])
+               || ($curGm[0]['valid_through'] != $mappedGroups[ $curGm[0]['co_group_id'] ]['valid_through'])) {
+              $newGroupMember = array(
+                'CoGroupMember' => array(
+                  'id'                     => $curGm[0]['id'],
+                  'co_group_id'            => $curGm[0]['co_group_id'],
+                  'co_person_id'           => $curGm[0]['co_person_id'],
+                  'member'                 => true,
+                  'owner'                  => false,
+                  'valid_from'             => $mappedGroups[ $curGm[0]['co_group_id'] ]['valid_from'],
+                  'valid_through'          => $mappedGroups[ $curGm[0]['co_group_id'] ]['valid_through'],
+                  'source_org_identity_id' => $curGm[0]['source_org_identity_id']
+                )
+              );
+              
+              $this->Co->CoPerson->CoGroupMember->clear();
+              
+              if(!$this->Co->CoPerson->CoGroupMember->save($newGroupMember, array("provision" => false))) {
+                throw new RuntimeException(_txt('er.db.save-a', array('CoGroupMember')));
+              }
+              
+              // Cut history
+              $this->Co->CoPerson->HistoryRecord->record($coPersonId,
+                                                         null,
+                                                         $curGm[0]['source_org_identity_id'],
+                                                         $actorCoPersonId,
+                                                         ActionEnum::CoGroupMemberEditedPipeline,
+                                                         $this->Co
+                                                              ->CoGroup
+                                                              ->CoGroupMember
+                                                              ->changesToString($newGroupMember,
+                                                                                array('CoGroupMember' => $curGm[0])),
+                                                         $gm['CoGroup']['id']);
+              
+              $this->Co->CoPerson->HistoryRecord->record($coPersonId,
+                                                         null,
+                                                         $orgIdentity['OrgIdentity']['id'],
+                                                         $actorCoPersonId,
+                                                         ActionEnum::CoGroupMemberEditedPipeline,
+                                                         _txt('rs.pi.sync-a', array(_txt('ct.co_group_members.1'),
+                                                                                    $coPipeline['CoPipeline']['name'],
+                                                                                    $coPipeline['CoPipeline']['id'])),
+                                                         $gm['CoGroup']['id']);
+              
+              $doProvision = true;
+            }
+          }
         }
       }
       

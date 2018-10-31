@@ -126,7 +126,9 @@
     <div class="field-info">
       <?php
         global $cm_lang, $cm_texts;
-        $attrs['value'] = (isset($co_groups) ? $co_groups[0]['CoGroup']['status'] : 'A');
+        
+        $attrs = array();
+        $attrs['value'] = (isset($co_groups) ? $co_groups[0]['CoGroup']['status'] : SuspendableStatusEnum::Active);
         $attrs['empty'] = false;
 
         if($e) {
@@ -213,7 +215,7 @@
     <thead>
       <tr>
         <th><?php print _txt('fd.name'); ?></th>
-        <th><?php print _txt('fd.status'); ?></th>
+        <th><?php print _txt('fd.co_people.status'); ?></th>
         <th><?php print _txt('fd.roles'); ?></th>
         <th class="actionButtons"><?php print _txt('fd.actions'); ?></th>
       </tr>
@@ -255,6 +257,16 @@
           } elseif($g['CoGroupMember']['member']) {
             print _txt('fd.group.mem');
           }
+          
+          // Warn if membership is invalid
+          if((!empty($g['CoGroupMember']['valid_from'])
+              && strtotime($g['CoGroupMember']['valid_from']) >= time())
+             ||
+             (!empty($g['CoGroupMember']['valid_through'])
+              && strtotime($g['CoGroupMember']['valid_through']) < time())) {
+            print " (" . _txt('fd.inactive') . ")";
+          }
+          
           print '</td>';
 
           print '<td class="actions">';

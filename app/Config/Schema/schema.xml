@@ -242,6 +242,7 @@
     <field name="ou" type="C" size="128" />
     <field name="valid_from" type="T" />
     <field name="valid_through" type="T" />
+    <field name="ordr" type="I" />
     <field name="status" type="C" size="2" />
     <field name="source_org_identity_id" type="I">
       <constraint>REFERENCES cm_org_identities(id)</constraint>
@@ -467,6 +468,87 @@
     </index>
   </table>
   
+  <table name="co_pipelines">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="co_id" type="I">
+      <notnull />
+      <constraint>REFERENCES cm_cos(id)</constraint>
+    </field>
+    <field name="name" type="C" size="128" />
+    <field name="status" type="C" size="2" />
+    <field name="match_strategy" type="C" size="2" />
+    <field name="match_type" type="C" size="32" />
+    <field name="sync_on_add" type="L" />
+    <field name="sync_on_update" type="L" />
+    <field name="sync_on_delete" type="L" />
+    <field name="create_role" type="L" />
+    <field name="sync_cou_id" type="I">
+      <constraint>REFERENCES cm_cous(id)</constraint>
+    </field>
+    <field name="sync_affiliation" type="C" size="32" />
+    <field name="sync_replace_cou_id" type="I">
+      <constraint>REFERENCES cm_cous(id)</constraint>
+    </field>
+    <field name="sync_status_on_delete" type="C" size="2" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    <field name="co_pipeline_id" type="I">
+      <constraint>REFERENCES cm_co_pipelines(id)</constraint>
+    </field>
+    <field name="revision" type="I" />
+    <field name="deleted" type="L" />
+    <field name="actor_identifier" type="C" size="256" />
+    
+    <index name="co_pipelines_i1">
+      <col>co_id</col>
+    </index>
+    <index name="co_pipelines_i2">
+      <col>co_pipeline_id</col>
+    </index>
+  </table>
+  
+  <table name="org_identity_sources">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="co_id" type="I">
+      <constraint>REFERENCES cm_cos(id)</constraint>
+    </field>
+    <field name="description" type="C" size="256" />
+    <field name="plugin" type="C" size="32" />
+    <field name="co_pipeline_id" type="I">
+      <constraint>REFERENCES cm_co_pipelines(id)</constraint>
+    </field>
+    <field name="status" type="C" size="2" />
+    <field name="sync_mode" type="C" size="2" />
+    <field name="sync_query_mismatch_mode" type="C" size="2" />
+    <field name="sync_query_skip_known" type="L" />
+    <field name="sync_on_user_login" type="L" />
+    <field name="eppn_identifier_type" type="C" size="128" />
+    <field name="eppn_suffix" type="C" size="128" />
+    <field name="hash_source_record" type="L" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    <field name="org_identity_source_id" type="I">
+      <constraint>REFERENCES cm_org_identity_sources(id)</constraint>
+    </field>
+    <field name="revision" type="I" />
+    <field name="deleted" type="L" />
+    <field name="actor_identifier" type="C" size="256" />
+    
+    <index name="org_identity_sources_i1">
+      <col>co_id</col>
+    </index>
+     
+    <index name="org_identity_sources_i2">
+      <col>org_identity_source_id</col>
+    </index>
+  </table>
+  
   <table name="co_provisioning_targets">
     <field name="id" type="I">
       <key />
@@ -480,6 +562,9 @@
     <field name="plugin" type="C" size="32" />
     <field name="provision_co_group_id" type="I">
       <constraint>REFERENCES cm_co_groups(id)</constraint>
+    </field>
+    <field name="skip_org_identity_source_id" type="I">
+      <constraint>REFERENCES cm_org_identity_sources(id)</constraint>
     </field>
     <field name="status" type="C" size="2" />
     <field name="ordr" type="I" />
@@ -824,6 +909,8 @@
     </field>
     <field name="member" type="L" />
     <field name="owner" type="L" />
+    <field name="valid_from" type="T" />
+    <field name="valid_through" type="T" />
     <field name="source_org_identity_id" type="I">
       <constraint>REFERENCES cm_org_identities(id)</constraint>
     </field>
@@ -1121,87 +1208,6 @@
     </index>
   </table>
   
-  <table name="co_pipelines">
-    <field name="id" type="I">
-      <key />
-      <autoincrement />
-    </field>
-    <field name="co_id" type="I">
-      <notnull />
-      <constraint>REFERENCES cm_cos(id)</constraint>
-    </field>
-    <field name="name" type="C" size="128" />
-    <field name="status" type="C" size="2" />
-    <field name="match_strategy" type="C" size="2" />
-    <field name="match_type" type="C" size="32" />
-    <field name="sync_on_add" type="L" />
-    <field name="sync_on_update" type="L" />
-    <field name="sync_on_delete" type="L" />
-    <field name="create_role" type="L" />
-    <field name="sync_cou_id" type="I">
-      <constraint>REFERENCES cm_cous(id)</constraint>
-    </field>
-    <field name="sync_affiliation" type="C" size="32" />
-    <field name="sync_replace_cou_id" type="I">
-      <constraint>REFERENCES cm_cous(id)</constraint>
-    </field>
-    <field name="sync_status_on_delete" type="C" size="2" />
-    <field name="created" type="T" />
-    <field name="modified" type="T" />
-    <field name="co_pipeline_id" type="I">
-      <constraint>REFERENCES cm_co_pipelines(id)</constraint>
-    </field>
-    <field name="revision" type="I" />
-    <field name="deleted" type="L" />
-    <field name="actor_identifier" type="C" size="256" />
-    
-    <index name="co_pipelines_i1">
-      <col>co_id</col>
-    </index>
-    <index name="co_pipelines_i2">
-      <col>co_pipeline_id</col>
-    </index>
-  </table>
-  
-  <table name="org_identity_sources">
-    <field name="id" type="I">
-      <key />
-      <autoincrement />
-    </field>
-    <field name="co_id" type="I">
-      <constraint>REFERENCES cm_cos(id)</constraint>
-    </field>
-    <field name="description" type="C" size="256" />
-    <field name="plugin" type="C" size="32" />
-    <field name="co_pipeline_id" type="I">
-      <constraint>REFERENCES cm_co_pipelines(id)</constraint>
-    </field>
-    <field name="status" type="C" size="2" />
-    <field name="sync_mode" type="C" size="2" />
-    <field name="sync_query_mismatch_mode" type="C" size="2" />
-    <field name="sync_query_skip_known" type="L" />
-    <field name="sync_on_user_login" type="L" />
-    <field name="eppn_identifier_type" type="C" size="128" />
-    <field name="eppn_suffix" type="C" size="128" />
-    <field name="hash_source_record" type="L" />
-    <field name="created" type="T" />
-    <field name="modified" type="T" />
-    <field name="org_identity_source_id" type="I">
-      <constraint>REFERENCES cm_org_identity_sources(id)</constraint>
-    </field>
-    <field name="revision" type="I" />
-    <field name="deleted" type="L" />
-    <field name="actor_identifier" type="C" size="256" />
-    
-    <index name="org_identity_sources_i1">
-      <col>co_id</col>
-    </index>
-     
-    <index name="org_identity_sources_i2">
-      <col>org_identity_source_id</col>
-    </index>
-  </table>
-  
   <table name="co_group_ois_mappings">
     <field name="id" type="I">
       <key />
@@ -1288,6 +1294,7 @@
     <field name="authz_co_group_id" type="I">
       <constraint>REFERENCES cm_co_groups(id)</constraint>
     </field>
+    <field name="my_identity_shortcut" type="L" />
     <field name="co_pipeline_id" type="I">
       <constraint>REFERENCES cm_co_pipelines(id)</constraint>
     </field>
@@ -1452,6 +1459,7 @@
       <constraint>REFERENCES cm_org_identity_sources(id)</constraint>
     </field>
     <field name="org_identity_mode" type="C" size="2" />
+    <field name="verify_family_name" type="L" />
     <field name="ordr" type="I" />
     <field name="created" type="T" />
     <field name="modified" type="T" />
@@ -2205,14 +2213,17 @@
     </field>
     <field name="name" type="C" size="128" />
     <field name="description" type="C" size="128" />
+    <field name="short_label" type="C" size="32" />
     <field name="co_group_id" type="I">
       <constraint>REFERENCES cm_co_groups(id)</constraint>
     </field>
     <field name="service_url" type="C" size="256" />
     <field name="service_label" type="C" size="1024" />
     <field name="contact_email" type="C" size="128" />
+    <field name="logo_url" type="C" size="512" />
     <field name="entitlement_uri" type="C" size="256" />
     <field name="visibility" type="C" size="2" />
+    <field name="identifier_type" type="C" size="32" />
     <field name="status" type="C" size="2" />
     <field name="created" type="T" />
     <field name="modified" type="T" />
@@ -2232,6 +2243,79 @@
     <index name="co_services_i3">
       <col>co_group_id</col>
     </index>
+    <index name="co_service_i4">
+      <col>co_id</col>
+      <col>identifier_type</col>
+    </index>
+    <index name="co_service_i5">
+      <col>co_id</col>
+      <col>short_label</col>
+    </index>
+  </table>
+  
+  <table name="co_dashboards">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="co_id" type="I">
+      <notnull />
+      <constraint>REFERENCES cm_cos(id)</constraint>
+    </field>
+    <field name="name" type="C" size="128" />
+    <field name="description" type="C" size="128" />
+    <field name="visibility" type="C" size="2" />
+    <field name="visibility_co_group_id" type="I">
+      <constraint>REFERENCES cm_co_groups(id)</constraint>
+    </field>
+    <field name="status" type="C" size="2" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    <field name="co_dashboard_id" type="I">
+      <constraint>REFERENCES cm_co_dashboards(id)</constraint>
+    </field>
+    <field name="revision" type="I" />
+    <field name="deleted" type="L" />
+    <field name="actor_identifier" type="C" size="256" />
+    
+    <index name="co_dashboards_i1">
+      <col>co_id</col>
+    </index>
+    
+    <index name="co_dashboards_i2">
+      <col>co_dashboard_id</col>
+    </index>
+  </table>
+
+  <table name="co_dashboard_widgets">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="co_dashboard_id" type="I">
+      <notnull />
+      <constraint>REFERENCES cm_co_dashboards(id)</constraint>
+    </field>
+    <field name="description" type="C" size="256" />
+    <field name="plugin" type="C" size="32" />
+    <field name="status" type="C" size="2" />
+    <field name="ordr" type="I" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    <field name="co_dashboard_widget_id" type="I">
+      <constraint>REFERENCES cm_co_dashboard_widgets(id)</constraint>
+    </field>
+    <field name="revision" type="I" />
+    <field name="deleted" type="L" />
+    <field name="actor_identifier" type="C" size="256" />
+    
+    <index name="co_dashboard_widgets_i1">
+      <col>co_id</col>
+    </index>
+    
+    <index name="co_dashboard_widgets_i2">
+      <col>co_dashboard_widget_id</col>
+    </index>
   </table>
   
   <table name="co_settings">
@@ -2243,12 +2327,10 @@
       <notnull />
       <constraint>REFERENCES cm_cos(id)</constraint>
     </field>
-    <field name="co_theme_id" type="I">
-      <constraint>REFERENCES cm_co_themes(id)</constraint>
-    </field>
     <field name="enable_nsf_demo" type="L" />
     <field name="disable_expiration" type="L" />
     <field name="disable_ois_sync" type="L" />
+    <field name="group_validity_sync_window" type="I" />
     <field name="enable_normalization" type="L" />
     <field name="invitation_validity" type="I" />
     <field name="permitted_fields_name" type="C" size="160" />
@@ -2261,6 +2343,12 @@
       <constraint>REFERENCES cm_co_pipelines(id)</constraint>
     </field>
     <field name="elect_strategy_primary_name" type="C" size="2" />
+    <field name="co_dashboard_id" type="I">
+      <constraint>REFERENCES cm_co_dashboards(id)</constraint>
+    </field>
+    <field name="co_theme_id" type="I">
+      <constraint>REFERENCES cm_co_themes(id)</constraint>
+    </field>
     <field name="created" type="T" />
     <field name="modified" type="T" />
     
@@ -2283,6 +2371,117 @@
     
     <index name="authentication_events_i1">
       <col>authenticated_identifier</col>
+    </index>
+  </table>
+  
+  <table name="servers">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="co_id" type="I">
+      <constraint>REFERENCES cm_cos(id)</constraint>
+    </field>
+    <field name="description" type="C" size="128" />
+    <field name="server_type" type="C" size="2" />
+    <field name="status" type="C" size="2" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    
+    <index name="servers_i1">
+      <col>co_id</col>
+    </index>
+    
+    <index name="servers_i2">
+      <col>co_id</col>
+      <col>server_type</col>
+    </index>
+  </table>
+  
+  <table name="http_servers">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="server_id" type="I">
+      <constraint>REFERENCES cm_servers(id)</constraint>
+    </field>
+    <field name="serverurl" type="C" size="256" />
+    <field name="username" type="C" size="128" />
+    <field name="password" type="C" size="80" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    
+    <index name="http_servers_i1">
+      <col>server_id</col>
+    </index>
+  </table>
+  
+  <table name="ldap_servers">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="server_id" type="I">
+      <constraint>REFERENCES cm_servers(id)</constraint>
+    </field>
+    <field name="serverurl" type="C" size="256" />
+    <field name="binddn" type="C" size="128" />
+    <field name="password" type="C" size="80" />
+    <field name="basedn" type="C" size="128" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    
+    <index name="ldap_servers_i1">
+      <col>server_id</col>
+    </index>
+  </table>
+  
+  <table name="oauth2_servers">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="server_id" type="I">
+      <constraint>REFERENCES cm_servers(id)</constraint>
+    </field>
+    <field name="serverurl" type="C" size="256" />
+    <!-- Don't call this client_id or cake will think it's a foreign key -->
+    <!-- Salesforce Client IDs are > 80 characters (!) -->
+    <field name="clientid" type="C" size="120" />
+    <field name="client_secret" type="C" size="80" />
+    <field name="access_grant_type" type="C" size="2" />
+    <field name="scope" type="C" size="256" />
+    <field name="refresh_token" type="C" size="160" />
+    <field name="access_token" type="C" size="160" />
+    <field name="token_response" type="XL" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    
+    <index name="oauth2_servers_i1">
+      <col>server_id</col>
+    </index>
+  </table>
+  
+  <table name="sql_servers">
+    <field name="id" type="I">
+      <key />
+      <autoincrement />
+    </field>
+    <field name="server_id" type="I">
+      <constraint>REFERENCES cm_servers(id)</constraint>
+    </field>
+    <field name="type" type="C" size="2" />
+    <field name="hostname" type="C" size="128" />
+    <field name="username" type="C" size="120" />
+    <field name="password" type="C" size="80" />
+    <!-- "database" is reserved by MySQL -->
+    <field name="databas" type="C" size="128" />
+    <field name="created" type="T" />
+    <field name="modified" type="T" />
+    
+    <index name="sql_servers_i1">
+      <col>server_id</col>
     </index>
   </table>
 </schema>

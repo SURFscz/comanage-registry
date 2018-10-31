@@ -534,7 +534,20 @@ class OrgIdentitySourcesController extends StandardController {
             $args['conditions']['CoGroup.id'] = array_keys($mappedGroups);
             $args['contain'] = false;
             
-            $this->set('vv_mapped_groups', $this->OrgIdentitySource->Co->CoGroup->find('all', $args));
+            $coGroups = $this->OrgIdentitySource->Co->CoGroup->find('all', $args);
+            
+            // Insert a CoGroupMember object for each found group
+            
+            for($i = 0;$i < count($coGroups);$i++) {
+              $coGroups[$i]['CoGroupMember'] = array(
+                'member' => (isset($mappedGroups[ $coGroups[$i]['CoGroup']['id'] ]['role'])
+                             && $mappedGroups[ $coGroups[$i]['CoGroup']['id'] ]['role'] == 'member'),
+                'valid_from' => $mappedGroups[ $coGroups[$i]['CoGroup']['id'] ]['valid_from'],
+                'valid_through' => $mappedGroups[ $coGroups[$i]['CoGroup']['id'] ]['valid_through'],
+              );
+            }
+            
+            $this->set('vv_mapped_groups', $coGroups);
           }
         }
         
@@ -631,7 +644,10 @@ class OrgIdentitySourcesController extends StandardController {
         
         $ret = $this->OrgIdentitySource->syncOrgIdentity($id,
                                                          $key,
-                                                         $this->Session->read('Auth.User.co_person_id'));
+                                                         $this->Session->read('Auth.User.co_person_id'),
+                                                         null,
+                                                         // Always force sync on manual request (CO-1556)
+                                                         true);
         
         $this->Flash->set(_txt('rs.org.src.'.$ret['status']), array('key' => 'success'));
         

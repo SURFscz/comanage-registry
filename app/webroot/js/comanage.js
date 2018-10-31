@@ -56,7 +56,7 @@ function generateFlash(text, type) {
 // For dynamically created elements, we can generate the spinner
 // dynamically by calling this function.
 
-// Set defaults - this is used by all spinners.
+// Set defaults - this is used by all full-page spinners.
 var coSpinnerOpts = {
   lines: 13, // The number of lines to draw
   length: 20, // The length of each line
@@ -73,6 +73,27 @@ var coSpinnerOpts = {
   className: 'spinner', // The CSS class to assign to the spinner
   zIndex: 100 // The z-index (defaults to 2000000000)
 };
+
+// Set defaults - this is used by all mini (localized) spinners.
+var coMiniSpinnerOpts = {
+  lines: 10, // The number of lines to draw
+  length: 4, // The length of each line
+  width: 2, // The line thickness
+  radius: 2, // The radius of the inner circle
+  corners: 0.2, // Corner roundness (0..1)
+  rotate: 0, // The rotation offset
+  direction: 1, // 1: clockwise, -1: counterclockwise
+  color: '#9FC6E2', // #rgb or #rrggbb or array of colors
+  speed: 1.2, // Rounds per second
+  trail: 60, // Afterglow percentage
+  shadow: false, // Whether to render a shadow
+  hwaccel: false, // Whether to use hardware acceleration
+  className: 'mini-spinner', // The CSS class to assign to the spinner
+  zIndex: 100, // The z-index (defaults to 2000000000)
+  top: '18px', // Positioning offset
+  left: '18px' // Positioning offset
+};
+
 
 // show a spinner
 function displaySpinner() {
@@ -149,4 +170,76 @@ function js_confirm_generic(txt, url, confirmbtxt, cancelbtxt, titletxt, tokenRe
 
   // Open the dialog
   $('#dialog').dialog('open');
+}
+
+// Generic goto page form handling for multi-page listings.
+// We handle this in javascript to avoid special casing controllers.
+// pageNumber         - page number         (int, required)
+// maxPage            - largest page number allowed (int, required)
+// intErrMsg          - error message for entering a non-integer value (string, required)
+// maxErrMsg          - error message for entering a page number greater than last page (string, required)
+function gotoPage(pageNumber,maxPage,intErrMsg,maxErrMsg) {
+  // Just return if no value
+  if (pageNumber == "") {
+    stopSpinner();
+    return false;
+  }
+
+  var pageNum = parseInt(pageNumber,10);
+  var max = parseInt(maxPage,10);
+
+  // Not an integer?  Return an error message.
+  if (isNaN(pageNum)) {
+    stopSpinner();
+    alert(intErrMsg);
+    return false;
+  }
+
+  // Page number too large? Return an error message.
+  if(pageNum > max) {
+    stopSpinner();
+    alert(maxErrMsg);
+    return false;
+  }
+
+  // Page number < 1? Set the page = 1.
+  if(pageNum < 1) {
+    pageNum = 1;
+  }
+
+  // Redirect to the new page:
+  window.location = window.location.pathname.replace(new RegExp('\/page:[0-9]*', 'g'), '')+'/page:' + pageNum;
+}
+
+// Generic limit page form handling for setting the page size (records shown on a page).
+// We handle this in javascript to avoid special casing controllers.
+// pageLimit         - page limit                            (int, required)
+// recordCount       - total number of records returned      (int, requried)
+// currentPage       - current page number                   (int, required)
+function limitPage(pageLimit,recordCount,currentPage) {
+  var limit = parseInt(pageLimit,10);
+  var count = parseInt(recordCount,10);
+  var page = parseInt(currentPage,10);
+
+  // Just cancel this if we have bad inputs
+  if (isNaN(limit) || isNaN(count) || isNaN(page)) {
+    stopSpinner();
+    return false;
+  }
+
+  // Add the new limit parameter to the url
+  var currentUrl =  window.location.pathname;
+  currentUrl = currentUrl.replace(new RegExp('\/limit:[0-9]*', 'g'), '')+'/limit:' + limit;
+
+  // Test to see if the new limit allows the current page to exist
+  if (count / page >= limit) {
+    // Current page can exist - keep the current page number
+    currentUrl = currentUrl.replace(new RegExp('\/page:[0-9]*', 'g'), '')+'/page:' + page;
+  } else {
+    // Force the url back to page one because the new page size cannot include our current page number
+    currentUrl = currentUrl.replace(new RegExp('\/page:[0-9]*', 'g'), '')+'/page:1';
+  }
+
+  // Redirect to the new page:
+  window.location = currentUrl;
 }

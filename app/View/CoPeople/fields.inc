@@ -672,7 +672,23 @@
                     } elseif($g['member']) {
                       print ' ' . _txt('fd.group.mem');
                     }
+                    
+                    // Warn if membership is invalid
+                    if((!empty($g['valid_from'])
+                        && strtotime($g['valid_from']) >= time())
+                       ||
+                       (!empty($g['valid_through'])
+                        && strtotime($g['valid_through']) < time())) {
+                      print " (" . _txt('fd.inactive') . ")";
+                    }
+
                     print '</div><div class="field-actions">';
+                    print $this->Html->link(_txt('op.edit'),
+                      array('controller' => 'co_group_members',
+                            'action' => 'edit',
+                            $g['id']),
+                      array('class' => 'editbutton'));
+                    
                     // XXX we already checked for $permissions['edit'], but not ['delete']... should we?
                     print '<a class="deletebutton" title="' . _txt('op.delete')
                       . '" onclick="javascript:js_confirm_generic(\''
@@ -854,6 +870,7 @@
                 <table id="<?php print $this->action; ?>_co_person_roles">
                   <tbody>
                   <tr class="line<?php print ($l % 2); $l++; ?>">
+                    <th><?php print _txt('fd.ordr'); ?></th>
                     <th><?php print _txt('fd.cou'); ?></th>
                     <th><?php print _txt('fd.title'); ?></th>
                     <th><?php print _txt('fd.affiliation'); ?></th>
@@ -869,10 +886,12 @@
                     // Set the status styling
                     $statusClass = "status-normal";
 
-                    if ($r['status'] == 'S' or $r['status'] == 'XP' or $r['status'] == 'D') {
+                    if($r['status'] == StatusEnum::Suspended 
+                       || $r['status'] == StatusEnum::Expired
+                       || $r['status'] == StatusEnum::Deleted) {
                       // Style status for suspended, expired, deleted
                       $statusClass = "warn-level-a"; // reddish-pink
-                    } elseif ($r['status'] != 'A') {
+                    } elseif($r['status'] != StatusEnum::Active) {
                       // Style status if otherwise not active
                       $statusClass = "warn-level-b"; // yellowish
                     }
@@ -881,16 +900,19 @@
                     $validThroughDate = !empty($r['valid_through']) ? $this->Time->format($r['valid_through'], "%F", false, $vv_tz) : false;
                     $validFromDate = !empty($r['valid_from']) ? $this->Time->format($r['valid_from'], "%F", false, $vv_tz) : false;
 
-                    if ($validThroughDate and $this->Time->isPast($validThroughDate)) {
+                    if ($validThroughDate && $this->Time->isPast($validThroughDate)) {
                       // valid through date exists and is in the past
                       $statusClass = "warn-level-a";
-                    } elseif ($validFromDate and $this->Time->isFuture($validFromDate)) {
+                    } elseif ($validFromDate && $this->Time->isFuture($validFromDate)) {
                       // valid from date is in the future
                       $statusClass = "warn-level-b";
                     }
                     
                   ?>
                   <tr class="line<?php print ($l % 2) . ' ' . $statusClass; $l++; ?>">
+                    <td><?php if (isset($r['ordr'])) {
+                        print filter_var($r['ordr'], FILTER_SANITIZE_SPECIAL_CHARS);
+                      } ?></td>
                     <td><?php if (isset($r['Cou']['name'])) {
                         print filter_var($r['Cou']['name'], FILTER_SANITIZE_SPECIAL_CHARS);
                       } ?></td>

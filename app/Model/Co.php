@@ -39,6 +39,7 @@ class Co extends AppModel {
   public $hasMany = array(
     "AttributeEnumeration" => array('dependent' => true),
     "Authenticator" => array('dependent' => true),
+    "CoDashboard" => array('dependent' => true),
     "CoDepartment" => array('dependent' => true),
     "CoEmailList" => array('dependent' => true),
     // A CO has zero or more enrollment flows
@@ -69,7 +70,8 @@ class Co extends AppModel {
     // It's OK to make the model dependent, because if they are pooled the
     // link won't be there to delete.
     "OrgIdentity" => array('dependent' => true),
-    "OrgIdentitySource" => array('dependent' => true)
+    "OrgIdentitySource" => array('dependent' => true),
+    "Server" => array('dependent' => true)
   );
   
   public $hasOne = array(

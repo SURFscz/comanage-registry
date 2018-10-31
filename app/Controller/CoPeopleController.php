@@ -58,7 +58,7 @@ class CoPeopleController extends StandardController {
     'CoGroupMember' => array('CoGroup'),
     'CoNsfDemographic',
     'CoOrgIdentityLink' => array('OrgIdentity' => array('Identifier', 'PrimaryName')),
-    'CoPersonRole' => array('CoPetition', 'Cou'),
+    'CoPersonRole' => array('CoPetition', 'Cou', 'order' => 'CoPersonRole.ordr ASC'),
     // This deep nesting will allow us to display the source of the attribute
     'EmailAddress' => array('SourceEmailAddress' => array('OrgIdentity' => array('OrgIdentitySourceRecord' => array('OrgIdentitySource')))),
     'Identifier' => array('CoProvisioningTarget',
@@ -723,8 +723,7 @@ class CoPeopleController extends StandardController {
                                                                                     array('CoEnrollmentFlow.id' => $this->request->named['coef']));
       $p['match'] = (($roles['cmadmin'] || $flowAuthorized)
                      &&
-                     ($p['match_policy'] == EnrollmentMatchPolicyEnum::Advisory
-                      || $p['match_policy'] == EnrollmentMatchPolicyEnum::Automatic));
+                     ($p['match_policy'] == EnrollmentMatchPolicyEnum::Advisory));
     }
     
     if(!empty($this->request->params['named']['copetitionid'])) {
@@ -1034,6 +1033,7 @@ class CoPeopleController extends StandardController {
       $args['contain'] = array(
         'PrimaryName',
         'CoGroupMember',
+        'CoOrgIdentityLink' => array('OrgIdentity' => array('OrgIdentitySourceRecord')),
         'Identifier'
       );
       
@@ -1176,4 +1176,5 @@ class CoPeopleController extends StandardController {
       $this->index();
     }
   }
+  
 }

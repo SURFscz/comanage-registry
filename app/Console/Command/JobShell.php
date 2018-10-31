@@ -28,6 +28,7 @@
 class JobShell extends AppShell {
   var $uses = array('Co',
                     'CoExpirationPolicy',
+                    'CoGroupMember',
                     'CoSetting',
                     'OrgIdentitySource');
   
@@ -65,18 +66,38 @@ class JobShell extends AppShell {
   }
   
   /**
+   * Execute group validity based reprovisioning for the specified CO
+   *
+   * @since  COmanage Registry v3.2.0
+   * @param  Integer $coId CO ID
+   */
+  
+  protected function groupValidity($coId) {
+    // Pull the current window for reprovisioning
+    
+    $w = $this->CoSetting->getGroupValiditySyncWindow($coId);
+    
+    if($w > 0) {
+      $this->CoGroupMember->reprovisionByValidity($coId, $w);
+    } else {
+      $this->out("- " . _txt('sh.job.gv.disabled'));
+    }
+  }
+  
+  /**
    * Sync Organizational Identity Sources for the specified CO
    *
    * @since  COmanage Registry v2.0.0
    * @param  Integer  $coId       CO ID
+   * @param  Boolean  $force      Force sync unchanged records
    */
   
-  protected function syncOrgSources($coId) {
+  protected function syncOrgSources($coId, $force=false) {
     // First see if syncing is enabled
     
     if($this->CoSetting->oisSyncEnabled($coId)) {
       try {
-        $this->OrgIdentitySource->syncAll($coId);
+        $this->OrgIdentitySource->syncAll($coId, $force);
       }
       catch(Exception $e) {
         $this->out("- " . $e->getMessage());
@@ -112,8 +133,18 @@ class JobShell extends AppShell {
           $this->expirations($co['Co']['id']);
         }
         
+        if($runAll || in_array('forcesyncorgsources', $this->args)) {
+          $this->out(_txt('sh.job.sync.ois', array($co['Co']['name'], $co['Co']['id'], _txt('fd.yes'))));
+          $this->syncOrgSources($co['Co']['id'], true);
+        }
+        
+        if($runAll || in_array('groupvalidity', $this->args)) {
+          $this->out(_txt('sh.job.gv', array($co['Co']['name'], $co['Co']['id'])));
+          $this->groupValidity($co['Co']['id']);
+        }
+        
         if($runAll || in_array('syncorgsources', $this->args)) {
-          $this->out(_txt('sh.job.sync.ois', array($co['Co']['name'], $co['Co']['id'])));
+          $this->out(_txt('sh.job.sync.ois', array($co['Co']['name'], $co['Co']['id'], _txt('fd.no'))));
           $this->syncOrgSources($co['Co']['id']);
         }
       }

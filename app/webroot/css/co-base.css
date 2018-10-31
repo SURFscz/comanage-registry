@@ -51,7 +51,7 @@ h1.loginMsg {
   text-align: center;
 }
 h1.firstPrompt {
-  font-family: "Noto Sans";
+  font-family: 'Noto Sans','Trebuchet MS',Arial,Helvetica,sans-serif;
   font-size: 1.2em;
   font-weight: normal;
 }
@@ -59,8 +59,13 @@ h1.firstPrompt {
   margin: 0.5em 0;
 }
 h2 {
-  font-size: 24px;
-  line-height: 28px;
+  font-size: 2em;
+  line-height: 2.5em;
+  margin: 0;
+}
+h3 {
+  font-size: 1.6em;
+  line-height: 1.6em;
   margin: 0;
 }
 a {
@@ -146,8 +151,10 @@ body.redirect .mdl-layout--fixed-drawer > .mdl-layout__header .mdl-layout__heade
 }
 /* USER MENU */
 #user-menu {
-  text-align: right;
   z-index: 4;
+}
+body.logged-out #user-menu {
+  text-align: right;
 }
 body.logged-in #user-menu {
   float: right;
@@ -162,13 +169,15 @@ body.logged-in #user-menu {
   position: relative;
   color: white;
 }
+#user-menu #global-search {
+  text-align: right;
+}
 #user-menu #global-search .material-icons {
   margin: 4px 22px 0 1px;
   vertical-align: bottom;
   font-size: 20px;
 }
 #global-search-box {
-  display: none; /* toggled by the field label */
   position: relative;
   z-index: 10;
   margin: 5px 22px 0 0;
@@ -220,22 +229,92 @@ body.logged-in #user-menu {
 #user {
   margin-top: 2px;
 }
-#user-links-menu li {
-  text-align: center;
+
+#user-panel {
+  position: absolute;
+  right: 0;
+  top: 27px;
+  z-index: 200;
+  color: #222;
+  background-color: #f8f8f8;
+  border: 1px solid #eee;
+  padding: 1em;
+  min-width: calc(100vw - 50px);
+  box-shadow: 0 2px 2px 0 rgba(0,0,0,.14),0 3px 1px -2px rgba(0,0,0,.2),0 1px 5px 0 rgba(0,0,0,.12);
 }
-#user-links-cn {
-  background-color: #1C77AF;
-  color: white;
+#user-panel-cn {
   margin-top: -8px;
-  text-align: center;
-  padding: 0.4em;
+  padding: 1em 0 0 0;
+  font-size: 1.2em;
+  line-height: 1em;
 }
-#user-links-id {
-  background-color: #2395E0;
-  /*background-color: #186696;*/
-  color: white;
-  text-align: center;
+#user-panel-id {
   padding: 0.4em;
+  max-width: 80vw;
+  word-wrap:break-word;
+}
+#user-panel-user-info { /* mobile only styling */
+  border-top: 1px solid #ddd;
+  margin-top: 1em;
+  padding-top: 1em;
+}
+#user-panel-user-info .material-icons {
+  float: left;
+  font-size: 5em;
+}
+#user-panel ul {
+  padding-left: 2em;
+}
+#user-panel .co-info-topbox {
+  background-color: #f3f3f3;
+  margin-top: 2em;
+}
+#user-panel .co-info-topbox strong {
+  font-weight: normal;
+}
+#user-panel #co-profile-link {
+  display: block;
+  vertical-align: middle;
+  background-color: #f4f4f4;
+  /*border: 1px solid #eee;*/
+  margin-top: 1em;
+  font-weight: normal;
+  font-size: 1.1em;
+  /*text-transform: unset;*/
+}
+#user-panel #co-profile-link:hover {
+  background-color: #eee;
+}
+#user-panel #co-profile-link .material-icons {
+  vertical-align: middle;
+  margin-right: 0.25em;
+  font-size: 16px;
+  color: #666;
+}
+#user-panel h2 {
+  font-size: 1.1em;
+  font-weight: normal;
+  margin: 1em 0 0 1em;
+  font-family: 'Noto Sans','Trebuchet MS',Arial,Helvetica,sans-serif;
+}
+#user-panel #panel-orgid-container {
+  margin-top: 2em;
+  border-top: 1px solid #ddd;
+  padding-top: 1em;
+}
+#user-panel #panel-orgid-container h2 {
+  margin-top: -0.25em;
+}
+#user-panel .org-ids {
+  font-style: italic;
+}
+#user-panel #user-panel-flows {
+  column-count: 2;
+}
+#user-panel #user-panel-flows,
+#user-panel #user-panel-invite,
+#user-panel #panel-orgid {
+  margin-top: 0;
 }
 /* NOTIFICATIONS */
 #notifications {
@@ -253,6 +332,7 @@ body.logged-in #user-menu {
   line-height: 1.3em;
   padding: 0.5em 1em;
   border-bottom: 1px solid #dae7ef;
+  color: #444;
 }
 #notifications .notification a {
   display: block;
@@ -325,8 +405,9 @@ form#notificationStatus {
 #logout {
   display: none;
 }
-#logout-in-menu {
+#logout-in-panel {
   margin: 4px 0 -8px;
+  text-align: right;
 }
 .co-menu-button a {
   background-color: #2395E0;
@@ -499,9 +580,9 @@ form#notificationStatus {
 #breadcrumbs {
   font-size: 0.9em;
 }
-body.co_petitions.view #titleNavContainer,
-body.co_person_roles #titleNavContainer,
-body.co_people.canvas #titleNavContainer {
+body.co_petitions.view .titleNavContainer,
+body.co_person_roles .titleNavContainer,
+body.co_people.canvas .titleNavContainer {
   padding-bottom: 0;
 }
 .pageTitle {
@@ -545,6 +626,10 @@ body.co_people.canvas #titleNavContainer {
 }
 #topLinks a:hover {
   color: #222;
+}
+#main #topLinks a:active,
+#main #topLinks a:hover {
+  text-decoration: underline;
 }
 /* RIGHT SIDEBAR */
 #right-sidebar {
@@ -612,6 +697,65 @@ body.co_people.canvas #titleNavContainer {
   top: -2px;
   height: 33px;
 }
+/* DASHBOARDS */
+#dashboard-tabs {
+  clear: both;
+  margin: 1em 0;
+  padding-top: 1em;
+}
+#dashboard-desc {
+  clear: both;
+  margin-top: 1em;
+}
+#dashboard-tabs .mdl-tabs__tab-bar {
+  justify-content: left;
+}
+#dashboard-tabs .mdl-tabs__tab {
+  position: relative;
+  top: -1px;
+}
+#dashboard-tabs .mdl-tabs__tab.selected {
+  background-color: #f8f8f8;
+  border: 1px solid #f2f2f2;
+  border-bottom: none;
+}
+.mini-spinner {
+  position: relative;
+}
+/* hide H1 tags found in URL widgets pointing into COmanage for both cleaner styling and accessibility */
+.dashboard-widget-container .titleNavContainer {
+  display: none;
+}
+/* DASHBOARD WIDGETS */
+.widget-list {
+  list-style: none;
+  margin-top: 0;
+  padding-left: 0;
+}
+.widget-list li {
+  padding: 1em;
+}
+.widget-list li:nth-child(2n+1) {
+  background-color: #f8f8f8;
+}
+.widget-list .announcement-title {
+  font-size: 1.4em;
+  font-weight: bold;
+}
+.widget-list .announcement-body {
+  padding-top: 1em;
+}
+.widget-actions {
+  margin: -0.5em 0 1em 0;
+  padding: 0;
+}
+.widget-actions li {
+  display: inline-block;
+  list-style: none;
+  font-size: 0.9em;
+}
+.widget-actions .material-icons {
+  color: #2395E0;
 }
 /* REDIRECT PAGE */
 #redirect-box {
@@ -939,14 +1083,43 @@ body.co_petitions .ui-dialog {
 }
 #pagination .paginationCounter {
   display: block;
-  margin-right: 0.5em;
+  margin: 0.4em 0.5em 0.4em 0;
 }
+#pagination .paginationFirst,
 #pagination .paginationPrev {
-  margin-right: 1em;
+  margin-right: 0.5em;
   font-size: 0.9em;
 }
+#pagination .paginationLast,
 #pagination .paginationNext {
-  margin-left: 1em;
+  margin-left: 0.5em;
+  font-size: 0.9em;
+}
+#pagination .pagination-form {
+  display: inline-block;
+  margin-left: 2em;
+}
+#pagination .pagination-form input[type=text] {
+  height: 1em;
+  width: 1.5em;
+  margin: 0;
+  font-size: 0.9em;
+}
+#pagination .pagination-form select {
+  margin: 0;
+  padding: 0;
+  font-size: 0.9em;
+}
+#pagination .pagination-form option {
+  padding: 0;
+}
+#pagination .pagination-form input[type="submit"] {
+  width: auto;
+  height: 2em;
+  padding: 0 4px;
+  min-width: 0;
+  min-height: 0;
+  line-height: initial;
   font-size: 0.9em;
 }
 #pagination span.current {
@@ -1013,7 +1186,6 @@ body.co_petitions .ui-dialog {
   width: 100%;
   height: 100%;
   padding: 4px 0;
-  margin: 0;
   color: #666;
 }
 #peopleAlphabet li.selected a,
@@ -1296,22 +1468,18 @@ a#top-search-toggle:hover {
 .co-card img {
   min-width: 100%;
   max-width: 100%;
-  margin: 0 0 0.5em 0;
+  margin: 1em 0;
 }
 #content .co-card .co-card-icons .material-icons {
   font-size: 2em;
   margin-right: 4px;
 }
 .co-card .co-card-icons {
-  position: absolute;
-  bottom: 1em;
-  right: 1em;
-  margin-top: 0.75em;
+  float: right;
+  margin-top: 1em;
 }
 .co-card-join-button {
-  position: absolute;
-  bottom: 1em;
-  left: 1em;
+  margin-top: 1em;
 }
 .co-card ul {
   padding: 0;
@@ -1827,8 +1995,11 @@ td.indented {
 }
 .mdl-button.mdl-button--colored,
 .mdl-button--raised.mdl-button--colored {
-  background-color: #53B1F4;
+  background-color: #53B1F4 !important; /* important required to override MDL's active state */
   color: white;
+}
+.mdl-button--raised.mdl-button--colored:hover {
+  background-color: #222 !important;
 }
 .mdl-button:hover {
   background-color: #f2f2f2;
@@ -1839,11 +2010,7 @@ td.indented {
 .mdl-button--accent.mdl-button--accent.mdl-button--raised,
 .mdl-button--accent.mdl-button--accent.mdl-button--fab {
   background-color: #c33; /* red */
-  /* background-color: #2BB673; /* green */
   color: #fff;
-}
-.mdl-button--raised.mdl-button--colored:hover {
-  background-color: #222;
 }
 .mdl-data-table th,
 .mdl-data-table td {

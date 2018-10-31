@@ -78,8 +78,35 @@
     // END DESKTOP MENU DRAWER BEHAVIOR
 
     // USER MENU BEHAVIORS
-    $("#global-search label").click(function () {
-      $("#global-search-box").toggle();
+    // Toggle the global search box
+    $("#global-search label").click(function (e) {
+      e.stopPropagation();
+      if ($("#global-search-box").is(":visible")) {
+        $("#global-search-box").hide();
+        $("#global-search-box").attr("aria-expanded","false");
+      } else {
+        $("#global-search-box").show();
+        $("#global-search-box").attr("aria-expanded","true");
+      }
+    });
+
+    // Toggle the custom user panel in the user menu
+    $("#user-panel-toggle").click(function(e) {
+      e.stopPropagation();
+      if ($("#user-panel").is(":visible")) {
+        $("#user-panel").hide();
+        $("#user-panel").attr("aria-expanded","false");
+      } else {
+        $("#user-panel").show();
+        $("#user-panel").attr("aria-expanded","true");
+      }
+    });
+
+    // Hide custom user menu items on click outside
+    $(document).on('click', function (e) {
+      if ($(e.target).closest("#user-panel, #global-search-box").length === 0) {
+        $("#user-panel, #global-search-box").hide();
+      }
     });
 
     // Accordion
@@ -320,6 +347,14 @@
     });
 
     // Datepickers
+
+    <?php /* For all calls to datepicker, wrap the calling date field in a
+      container of class .modelbox-data: this allows us to show the datepicker next to
+      the appropriate field because jQuery drops the div at the bottom of the body and
+      that approach doesn't work well with Material Design Light (MDL). If you do not
+      do this, the datepicker will float up to the top of the browser window. See
+      app/View/CoGroupMembers for an example. */ ?>
+
     $(".datepicker").datepicker({
       changeMonth: true,
       changeYear: true,
@@ -349,8 +384,6 @@
     }).bind('click',function () {
       $("#ui-datepicker-div").appendTo($(this).closest('.modelbox-data'));
     });
-
-
 
     $(".datepicker-m").datepicker({
       changeMonth: true,
