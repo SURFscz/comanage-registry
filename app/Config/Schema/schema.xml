@@ -485,6 +485,7 @@
     <field name="sync_on_update" type="L" />
     <field name="sync_on_delete" type="L" />
     <field name="create_role" type="L" />
+    <field name="link_name" type="L" />
     <field name="sync_cou_id" type="I">
       <constraint>REFERENCES cm_cous(id)</constraint>
     </field>
@@ -1207,7 +1208,7 @@
       <unique />
     </index>
   </table>
-  
+
   <table name="co_group_ois_mappings">
     <field name="id" type="I">
       <key />
