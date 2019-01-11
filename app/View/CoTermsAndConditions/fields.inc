@@ -101,7 +101,7 @@
       </div>
       <div class="field-info">
         <?php print ($e
-                     ? $this->Form->input('url', array('size' => '60', 'required'=>FALSE))
+                     ? $this->Form->input('url', array('size' => '60', 'required'=>false))
                      : filter_var($co_terms_and_conditions[0]['CoTermsAndConditions']['url'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
       </div>
     </li>
@@ -114,8 +114,8 @@
       </div>
       <div class="field-info">
         <?php print ($e
-                     ? $this->Form->input('tc_body', array('required'=>FALSE))
-                     : filter_var($co_terms_and_conditions[0]['CoTermsAndConditions']['tc_body'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
+                     ? $this->Form->input('body', array('required'=>false))
+                     : filter_var($co_terms_and_conditions[0]['CoTermsAndConditions']['body'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
       </div>
     </li>
     <li>
@@ -167,7 +167,7 @@
       <li class="fields-submit">
         <div class="field-name"></div>
         <div class="field-info">
-          <?php print $this->Form->submit($submit_label, array('onClick' => 'on_submit()')); ?>
+          <?php print $this->Form->submit($submit_label); ?>
         </div>
       </li>
     <?php endif; ?>

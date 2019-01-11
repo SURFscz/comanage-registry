@@ -278,7 +278,7 @@ class CoEnrollmentAttributesController extends StandardController {
     // Or try the default behavior
     return parent::calculateImpliedCoId();
   }
-
+    
   /**
    * Authorization for this Controller, called by Auth component
    * - precondition: Session.Auth holds data used for authz decisions

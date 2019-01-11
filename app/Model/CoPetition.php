@@ -1743,15 +1743,25 @@ class CoPetition extends AppModel {
       }
     }
     
-    if(!empty($coData) && !$coPersonId) {
+    if(!empty($coData)) {
+      if($coPersonId) {
+        // A CO Person ID might have been created by a pipeline
+        $coData['EnrolleeCoPerson']['id'] = $coPersonId;
+      }
+      
+      // Insert some additional attributes
+      $coData['EnrolleeCoPerson']['co_id'] = $petition['CoPetition']['co_id'];
+      $coData['EnrolleeCoPerson']['status'] = StatusEnum::Pending;
       
       // Save the CO Person Data
       
       if($this->EnrolleeCoPerson->saveAssociated($coData, array("validate" => false,
                                                                 "atomic" => true,
                                                                 "provision" => false))) {
-        $coPersonId = $this->EnrolleeCoPerson->id;
-        $createLink = true;
+        if(!$coPersonId) {
+          $coPersonId = $this->EnrolleeCoPerson->id;
+          $createLink = true;
+        }
         
         // Update the petition with the new identifier
         $this->saveField('enrollee_co_person_id', $coPersonId);
@@ -2358,10 +2368,17 @@ class CoPetition extends AppModel {
 
     $args = array();
     $args['conditions']['CoPetition.id'] = $id;
-    $args['contain']['EnrolleeCoPerson'][] = 'PrimaryName';
+    $args['contain']['EnrolleeCoPerson'] = array(
+      'EmailAddress',
+      'PrimaryName'
+    );
     $args['contain']['EnrolleeCoPerson']['CoPersonRole'][] = 'Cou';
     $args['contain']['EnrolleeCoPerson']['CoPersonRole']['SponsorCoPerson'][] = 'PrimaryName';
-    $args['contain']['EnrolleeOrgIdentity'] = array('PrimaryName');
+    $args['contain']['EnrolleeOrgIdentity'] = array(
+      'EmailAddress',
+      'OrgIdentitySourceRecord',
+      'PrimaryName'
+    );
     
     $pt = $this->find('first', $args);
     
@@ -2369,7 +2386,46 @@ class CoPetition extends AppModel {
       throw new InvalidArgumentException(_txt('er.notfound', array(_txt('ct.co_petitions.1'), $id)));
     }
     
-    $toEmail = $ea['mail'];
+    // Look for an email address to confirm. Pending the big email confirmation
+    // rewrite currently scheduled for v4.0.0, we first look for an address
+    // associated with the Org Identity, and then for an address associated with
+    // the CO Person. We skip already verified addresses, as well as those
+    // associated with Org Identity Sources (since we can't update those
+    // Org Identities).
+    
+    $toEmail = null;
+    
+    if(!empty($pt['EnrolleeOrgIdentity']['EmailAddress'])
+       // If there's an OrgIdentitySourceRecord we can't write to any 
+       // associated EmailAddress, so skip this OrgIdentity
+       && empty($pt['EnrolleeOrgIdentity']['OrgIdentitySourceRecord'])) {
+      foreach($pt['EnrolleeOrgIdentity']['EmailAddress'] as $ea) {
+        if(!$ea['verified']) {
+          // Use this address
+          $toEmail = $ea;
+          break;
+        }
+      }
+    }
+    
+    if(!$toEmail) {
+      // No Org Identity Email, check the CO Person record
+      
+      if(!empty($pt['EnrolleeCoPerson']['EmailAddress'])) {
+        foreach($pt['EnrolleeCoPerson']['EmailAddress'] as $ea) {
+          if(!$ea['verified']) {
+            // Use this address
+            $toEmail = $ea;
+            break;
+          }
+        }
+      }
+    }
+    
+    if(!$toEmail) {
+      throw new RuntimeException(_txt('er.pt.mail',
+                                      array(generateCn($pt['EnrolleeCoPerson']['PrimaryName']))));
+    }
     
     // Now we need some info from the enrollment flow
     
@@ -2422,7 +2478,7 @@ class CoPetition extends AppModel {
     $coInviteId = $this->CoInvite->send($pt['CoPetition']['enrollee_co_person_id'],
                                         $pt['CoPetition']['enrollee_org_identity_id'],
                                         $actorCoPersonId,
-                                        $toEmail,
+                                        $toEmail['mail'],
                                         $ef['CoEnrollmentFlow']['notify_from'],
                                         $ef['Co']['name'],
                                         $subject,
@@ -2444,14 +2500,14 @@ class CoPetition extends AppModel {
       $this->CoPetitionHistoryRecord->record($id,
                                              $actorCoPersonId,
                                              PetitionActionEnum::InviteSent,
-                                             _txt('rs.inv.sent', array($toEmail)));
+                                             _txt('rs.inv.sent', array($toEmail['mail'])));
     }
     catch(Exception $e) {
       $dbc->rollback();
       throw new RuntimeException(_txt('er.db.save-a', array('CoPetitionHistoryRecord')));
     }
     
-    return $toEmail;
+    return $toEmail['mail'];
   }
   
   /**

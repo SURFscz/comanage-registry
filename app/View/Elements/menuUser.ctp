@@ -59,7 +59,7 @@
   <div id="notifications">
     <a href="#" class="topMenu" id="user-notifications">
       <span id="user-notification-count">
-         <?php print count($vv_my_notifications); ?>
+         <?php print $vv_my_notification_count; ?>
       </span>
       <?php if(count($vv_my_notifications) > 0): ?>
         <em class="material-icons icon-adjust">notifications_active</em>
@@ -106,14 +106,18 @@
   </div>
 <?php endif; ?>
 
-<?php if($this->Session->check('Auth.User.name')): ?>
+<?php if($this->Session->check('Auth.User.username')): ?>
   <div id="user">
     <a href="#" class="topMenu" id="user-panel-toggle" aria-controls="user-panel">
       <span id="user-common-name">
         <?php
-          // Print the user's name
-          $userCN = generateCn($this->Session->read('Auth.User.name'));
-          print $userCN;
+          $userCN = "";
+          
+          if($this->Session->check('Auth.User.name')) {
+            // Print the user's name
+            $userCN = generateCn($this->Session->read('Auth.User.name'));
+            print $userCN;
+          }
         ?>
       </span>
       <em class="material-icons icon-adjust">person</em>
@@ -164,12 +168,12 @@
           }
         }
 
-        // Enrollment flows / Invitations
+        // Enrollment flows
         if(isset($cur_co)) {
           // Convert the list of COs with enrollment flows defined into a more useful format
           $efcos = Hash::extract($vv_enrollment_flow_cos, '{n}.CoEnrollmentFlow.co_id');
 
-          if (in_array($cur_co['Co']['id'], $efcos)) {
+          if(in_array($cur_co['Co']['id'], $efcos)) {
             // If we have enrollment flows, display them directly
             if (!empty($menuContent['flows']) && ($permissions['menu']['createpetition'] || $permissions['menu']['invite'])) {
               print '<div id="user-panel-flows-container">';
@@ -186,25 +190,6 @@
                 );
                 print '</li>';
               }
-              print '</ul>';
-              print '</div>';
-            }
-          } else {
-            // Provide an invite link (default enrollment) otherwise if allowed
-            if (isset($permissions['menu']['invite']) && $permissions['menu']['invite']) {
-              print '<div id="user-panel-flows-container">';
-              print '<h2>' . _txt('me.invite') . '</h2>';
-              print '<ul id="user-panel-invite">';
-              print '<li>';
-
-              $args = array();
-              $args['plugin'] = null;
-              $args['controller'] = 'org_identities';
-              $args['action'] = 'find';
-              $args['co'] = $cur_co['Co']['id'];
-              print $this->Html->link(_txt('op.inv.new'), $args);
-
-              print '</li>';
               print '</ul>';
               print '</div>';
             }
@@ -254,30 +239,23 @@
               <li class="panel-orgid-ids">
                 <?php if(!empty($orgID['orgName'])): ?>
                   <span class="org-name">
-                    <?php
-                      print $this->Html->link($orgID['orgName'],
-                        array(
-                          'controller' => 'org_identities',
-                          'action' => ('view'),
-                          $orgID['orgID_id']
-                        )
-                      ) . ": ";
-                    ?>
+                    <?php print $orgID['orgName']; ?>
                   </span>
                 <?php endif; ?>
                 <span class="org-ids">
                   <?php
-                    // Identifier - could send these to each identifier view using
-                    // controller 'identifiers' with $id['identifier_id'] but let's
-                    // keep this simple: for now the ids will also link to the Org ID view.
+                    // Identifier - link to the Org ID view.
                     foreach($orgID['identifiers'] as $id) {
+                      if(!empty($orgID['orgName'])) print "(";
                       print $this->Html->link($id['identifier'],
                         array(
                           'controller' => 'org_identities',
                           'action' => ('view'),
                           $orgID['orgID_id']
                         )
-                      ) . " ";
+                      );
+                      if(!empty($orgID['orgName'])) print ")";
+                      print " "; // in the event of more than one id
                     }
                   ?>
                 </span>

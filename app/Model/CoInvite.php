@@ -133,7 +133,6 @@ class CoInvite extends AppModel {
             throw new RuntimeException(_txt('er.cop.nf', array($invite['CoPerson']['id'])));
           }
         }
-        
       } else {
         
         // Record a history record that the invitation expired
