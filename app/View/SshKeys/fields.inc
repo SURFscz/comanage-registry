@@ -74,7 +74,7 @@
 <?php if($e): ?>
 <script>
   $(document).ready(function() {
-    $('#edit_ssh_key .ssh_key-skey').on('change',function() {      
+    $('form .ssh_key-skey').on('change',function() {      
         // check to see if the pasted text by chance contains a full SSH authorized key,
         // including a type and a comment. If so, parse it and set the comment and type
         // fields instead
@@ -84,7 +84,9 @@
           "ssh-dss": <?php echo json_encode(SshKeyTypeEnum::DSA); ?>,
           "ssh-rsa": <?php echo json_encode(SshKeyTypeEnum::RSA); ?>,
           "ssh-ed25519": <?php echo json_encode(SshKeyTypeEnum::ED25519); ?>,
-          "ecdsa-sha2-nistp256": <?php echo json_encode(SshKeyTypeEnum::ECDSA); ?>
+          "ecdsa-sha2-nistp256": <?php echo json_encode(SshKeyTypeEnum::ECDSA); ?>,
+          "ecdsa-sha2-nistp384": <?php echo json_encode(SshKeyTypeEnum::ECDSA384); ?>,
+          "ecdsa-sha2-nistp521": <?php echo json_encode(SshKeyTypeEnum::ECDSA521); ?>
         };
 
         if(value.indexOf(' ') !== -1) {
@@ -98,9 +100,9 @@
           // type should be one of the ssh-<keytype> fields and key should
           // only contain base64 characters
           if(typeToCO[type]) {
-            $('#edit_ssh_key .ssh_key-comment').val(comment);
-            $('#edit_ssh_key .ssh_key-type').val(typeToCO[type]);
-            $('#edit_ssh_key .ssh_key-skey').val(key);
+            $('.ssh_key-comment',$(this).parents('form')).val(comment);
+            $('.ssh_key-type',$(this).parents('form')).val(typeToCO[type]);
+            $('.ssh_key-skey',$(this).parents('form')).val(key);
           }          
         }
         else if(value.match(/^[A-Za-z0-9\+\/]+=*$/) !== null) {
@@ -118,13 +120,21 @@
           else if(value.indexOf('AAAAC3NzaC1lZDI1NTE5') === 0) {
             // ssh-ed25519
             type='ssh-ed25519';
-          } 
+          }
           else if(value.indexOf('AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYA') === 0) {
             // ecdsa-sha2-nistp256
             type='ecdsa-sha2-nistp256';
           }
+          else if(value.indexOf('AAAAE2VjZHNhLXNoYTItbmlzdHAzODQA') === 0) {
+            // ecdsa-sha2-nistp384
+            type='ecdsa-sha2-nistp384';
+          }
+          else if(value.indexOf('AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEA') === 0) {
+            // ecdsa-sha2-nistp521
+            type='ecdsa-sha2-nistp521';
+          }
           if(type !== null) {
-            $('#edit_ssh_key ssh_key-type').val(typeToCO[type]);
+            $('.ssh_key-type',$(this).parents('form')).val(typeToCO[type]);
           }
         }
     });
