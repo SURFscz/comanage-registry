@@ -243,12 +243,12 @@ class OrgIdentity extends AppModel {
     
     $new = array();
     
-    foreach(array_keys($src['OrgIdentity']) as $k)
-    {
+    foreach(array_keys($src['OrgIdentity']) as $k) {
       // Copy most fields
       
-      if($k != 'id' && $k != 'co_id' && $k != 'created' && $k != 'modified')
+      if($k != 'id' && $k != 'co_id' && $k != 'created' && $k != 'modified') {
         $new['OrgIdentity'][$k] = $src['OrgIdentity'][$k];
+      }
     }
     
     // Set the CO ID
@@ -256,26 +256,28 @@ class OrgIdentity extends AppModel {
     
     // Copy most fields from most dependent models.
     
-    foreach(array_keys($this->hasOne) as $m)
-    {
-      if($this->hasOne[$m]['dependent'])
-      {
-        foreach(array_keys($src[$m]) as $k)
-        {
-          if($k != 'id' && $k != 'created' && $k != 'modified')
+    foreach(array_keys($this->hasOne) as $m) {
+      // Do not copy the dependent OrgIdentitySourceRecord and PipeLineCoPersonRole, because they are CO specific
+      
+      if($this->hasOne[$m]['dependent'] && !in_array($m, array('OrgIdentitySourceRecord','PipelineCoPersonRole'))) {
+        foreach(array_keys($src[$m]) as $k) {
+          if($k != 'id' && $k != 'created' && $k != 'modified' && $k != 'OrgIdentity') {
             $new[$m][$k] = $src[$m][$k];
+          }
         }
       }
     }
     
-    foreach(array_keys($this->hasMany) as $m)
-    {
-      if($this->hasMany[$m]['dependent'] && $m != 'CoPetition')
-      {
-        foreach(array_keys($src[$m]) as $k)
-        {
-          if($k != 'id' && $k != 'created' && $k != 'modified')
-            $new[$m][$k] = $src[$m][$k];
+    foreach(array_keys($this->hasMany) as $m) {
+      // Do not copy petition, pipeline and CoPerson related records
+      
+      if($this->hasMany[$m]['dependent'] && !in_array($m, array('CoPetition', 'CoOrgIdentityLink','ArchivedCoPetition','HistoryRecord','PipelineCoGroupMember'))) {
+        foreach($src[$m] as $model) {
+          foreach($model as $k=>$v) {
+            if($k != 'id' && $k != 'created' && $k != 'modified' && $k != 'OrgIdentity') {
+              $new[$m][$k] = $v;
+            }
+          }
         }
       }
     }
