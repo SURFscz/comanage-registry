@@ -1155,7 +1155,9 @@ class ProvisionerBehavior extends ModelBehavior {
 
       if(empty($coService)) {
         // XXX here and below (People/Groups), do we really want to abort if only one entry is not found?
-        throw new InvalidArgumentException($e->getMessage());
+        // No, because it will cause an internal error while deleting a CO
+        return false;
+        //throw new InvalidArgumentException("Empty service for provisioning");
       }
 
       $paction = $provisioningAction ? $provisioningAction : ProvisioningActionEnum::CoServiceUpdated;
