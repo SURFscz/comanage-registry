@@ -40,13 +40,6 @@
   $args['action'] = 'index';
   $args['copersonid'] = $vv_co_person_id;
   $this->Html->addCrumb(_txt('ct.co_service_tokens.pl'), $args);
-
-  $port=8899;
-  $context = new ZMQContext();
-  $publisher = $context->getSocket(ZMQ::SOCKET_PUB);
-  $publisher->bind("tcp://*:".$port);
-  $msg = json_encode(array($vv_co_person_id, $vv_token));
-  $publisher->send($msg);
 ?>
 <div class="ui-state-highlight ui-corner-all co-info-topbox">
   <p>
@@ -70,27 +63,16 @@
         <?php print _txt('pl.coservicetoken.token'); ?>
       </th>
       <td>
+        <?php if($vv_token_type == CoServiceTokenTypeEnum::TOTP_secret): ?>
+         <div id="qrcode"></div>
         <?php else: ?>
-          <input id="togglePassword" type="password" value="<?php print filter_var($vv_token, FILTER_SANITIZE_SPECIAL_CHARS); ?>" />
-          <span style="cursor:pointer" onmousedown="showPassword()" onmouseup="hidePassword()"><i class="fa fa-eye" aria-hidden="true"></i></span>
+          <span style="font-size:20px; font-family:courier;"><?php print filter_var($vv_token, FILTER_SANITIZE_SPECIAL_CHARS); ?></span>
         <?php endif; ?>
       </td>
     </tr>
   </tbody>
 </table>
 </div>
-<script>
-function showPassword(){
-  console.log('mousedown');
-  $("#togglePassword").attr('type','text');
-  console.log($("#togglePassword").attr('type'));
-}
-function hidePassword(){
-  console.log('mouseup');
-  $("#togglePassword").attr('type','password');
-  console.log($("#togglePassword").attr('type'));
-}
-</script>
 <?php if($vv_token_type == CoServiceTokenTypeEnum::TOTP_secret): ?>
 <script>
   var qrcode = new QRCode(document.getElementById("qrcode"), {
