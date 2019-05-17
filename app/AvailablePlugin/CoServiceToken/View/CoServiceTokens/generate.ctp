@@ -76,14 +76,10 @@
 </div>
 <script>
 function showPassword(){
-  console.log('mousedown');
   $("#togglePassword").attr('type','text');
-  console.log($("#togglePassword").attr('type'));
 }
 function hidePassword(){
-  console.log('mouseup');
   $("#togglePassword").attr('type','password');
-  console.log($("#togglePassword").attr('type'));
 }
 </script>
 <?php if($vv_token_type == CoServiceTokenTypeEnum::TOTP_secret): ?>
