@@ -66,13 +66,26 @@
         <?php if($vv_token_type == CoServiceTokenTypeEnum::TOTP_secret): ?>
          <div id="qrcode"></div>
         <?php else: ?>
-          <span style="font-size:20px; font-family:courier;"><?php print filter_var($vv_token, FILTER_SANITIZE_SPECIAL_CHARS); ?></span>
+          <input id="togglePassword" type="password" value="<?php print filter_var($vv_token, FILTER_SANITIZE_SPECIAL_CHARS); ?>" />
+          <span style="cursor:pointer" onmousedown="showPassword()" onmouseup="hidePassword()"><i class="fa fa-eye" aria-hidden="true"></i></span>
         <?php endif; ?>
       </td>
     </tr>
   </tbody>
 </table>
 </div>
+<script>
+function showPassword(){
+  console.log('mousedown');
+  $("#togglePassword").attr('type','text');
+  console.log($("#togglePassword").attr('type'));
+}
+function hidePassword(){
+  console.log('mouseup');
+  $("#togglePassword").attr('type','password');
+  console.log($("#togglePassword").attr('type'));
+}
+</script>
 <?php if($vv_token_type == CoServiceTokenTypeEnum::TOTP_secret): ?>
 <script>
   var qrcode = new QRCode(document.getElementById("qrcode"), {
