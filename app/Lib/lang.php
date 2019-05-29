@@ -2071,6 +2071,16 @@ original notification at
   'sh.ug.110.gr' =>       'Renaming and reconciling automatic groups (please wait, this may take some time)',
   'sh.ug.110.is' =>       'Updating inactive identifier status',
   'sh.ug.310.url' =>      'Instantiating default URL Extended Types',
+  'sh.pr.arg.coid' =>     'Numeric CO ID to (re)provision (all COs if not specified)',
+  'sh.pr.arg.provisioner' => 'Name of the provisioner to run (all if not specified)',
+  'sh.pr.arg.type' =>     'Name of the provisioner plugin type (all plugins if not specified)',
+  'sh.pr.arg.epilog' =>   "If no provisioner is specified, all run.",
+  'sh.pr.action' =>       'Provisioning \'%1$s\' (%2$d) through \'%3$s\' (%4$s)',
+  'sh.pr.done' =>         "Provisioning finished.",
+  'sh.pr.err.noco' =>     "No CO specified or found",
+  'sh.pr.warn.noprov' =>  'CO \'%1$s\' (%2$d) does not specify any valid provisioners',
+  'sh.pr.warn.unknown' => 'Model %1$s (id %2$d/%3$s) not found, skipping',
+  'sh.pr.warn.unknown2' =>'Unknown error encountered while provisioning model %1$s (id %2$d/%3$s): %4$s',
 );
 
 // Make a copy of the original texts, since CoLocalizations can override them
