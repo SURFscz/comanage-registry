@@ -1294,6 +1294,7 @@ original notification at
   'fd.ia.format.p1' => 'given.family(.#)@myvo.org',
   'fd.ia.format.p2' => 'given(.m).family(.#)@myvo.org',
   'fd.ia.format.p3' => 'gmf#@myvo.org',
+  'fd.ia.format.p4' => 'uid@co',
   'fd.ia.maximum' =>  'Maximum',
   'fd.ia.maximum.desc' => 'The maximum value for randomly generated identifiers',
   'fd.ia.minimum' =>  'Minimum',
