@@ -1746,8 +1746,6 @@ class CoPetition extends AppModel {
         
         $coData['PrimaryName'] = $orgData['PrimaryName'];
       }
-
-      $this->checkModelForPrimaryName($coData);
     }
     
     if(!empty($coData)) {
@@ -1759,6 +1757,8 @@ class CoPetition extends AppModel {
       // Insert some additional attributes
       $coData['EnrolleeCoPerson']['co_id'] = $petition['CoPetition']['co_id'];
       $coData['EnrolleeCoPerson']['status'] = StatusEnum::Pending;
+
+      $this->checkModelForPrimaryName($coData);
       
       // Save the CO Person Data
       
