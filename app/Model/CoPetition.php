@@ -1564,7 +1564,7 @@ class CoPetition extends AppModel {
     if(!$id) {
       throw new InvalidArgumentException(_txt('er.notprov.id', array(_txt('ct.petitions.1'))));
     }
-    
+
     // Start a transaction
     $dbc = $this->getDataSource();
     $dbc->begin();
@@ -1717,30 +1717,29 @@ class CoPetition extends AppModel {
         $dbc->rollback();
         throw new RuntimeException(_txt('er.db.save-a', array('OrgIdentity')));
       }
-      
-      // Loop through all EmailAddresses, Identifiers, and Names to see if there are any
-      // we should copy to the CO Person.
-      
-      foreach(array('EmailAddress', 'Identifier', 'Name') as $m) {
-        if(!empty($orgData[$m])) {
-          foreach(array_keys($orgData[$m]) as $a) {
-            // $a will be the co_enrollment_attribute:id, so we can tell different
-            // addresses apart
-            if(isset($copyAttrs[$a])) {
-              $coData[$m][$a] = $orgData[$m][$a];
-            }
+    }
+
+    // Loop through all EmailAddresses, Identifiers, and Names to see if there are any
+    // we should copy to the CO Person.
+    foreach(array('EmailAddress', 'Identifier', 'Name') as $m) {
+      if(!empty($orgData[$m])) {
+        foreach(array_keys($orgData[$m]) as $a) {
+          // $a will be the co_enrollment_attribute:id, so we can tell different
+          // addresses apart
+          if(isset($copyAttrs[$a])) {
+            $coData[$m][$a] = $orgData[$m][$a];
           }
         }
       }
+    }
+
+    // PrimaryName shows up as a singleton, and so needs to be handled separately.
+
+    if(!empty($orgData['PrimaryName']['co_enrollment_attribute_id'])
+       && isset($copyAttrs[ $orgData['PrimaryName']['co_enrollment_attribute_id'] ])) {
+      // Copy PrimaryName to the CO Person
       
-      // PrimaryName shows up as a singleton, and so needs to be handled separately.
-      
-      if(!empty($orgData['PrimaryName']['co_enrollment_attribute_id'])
-         && isset($copyAttrs[ $orgData['PrimaryName']['co_enrollment_attribute_id'] ])) {
-        // Copy PrimaryName to the CO Person
-        
-        $coData['PrimaryName'] = $orgData['PrimaryName'];
-      }
+      $coData['PrimaryName'] = $orgData['PrimaryName'];
     }
     
     if(!empty($coData)) {

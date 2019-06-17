@@ -370,11 +370,6 @@ class OrgIdentity extends AppModel {
    */
   
   public function pipeline($id) {
-    $args = array();
-    $args['conditions']['CoPetition.enrollee_org_identity_id'] = $id;
-    $args['conditions']['CoPetition.status'] = PetitionStatusEnum::Finalized;
-    $args['order'][] = 'CoPetition.created ASC';
-    $args['contain'][] = 'CoEnrollmentFlow';
     
     // First see if this Org Identity is attached to a Petition, and if so if that
     // Petition's Enrollment Flow in turn has a pipeline. Since an Org Identity

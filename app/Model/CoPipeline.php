@@ -201,7 +201,14 @@ class CoPipeline extends AppModel {
     if(empty($pipeline)) {
       throw new InvalidArgumentException(_txt('er.notfound', array(_txt('ct.co_pipelines.1'), $id)));
     }
-    
+
+    // see if the PipeLine is actually active
+    if($pipeline['CoPipeline']['status'] == SuspendableStatusEnum::Suspended
+      || $pipeline['CoPipeline']['deleted']
+      ) {
+      return true;
+    }
+
     // See if we are configured for the requested action.
     
     if(($syncAction == SyncActionEnum::Add && !$pipeline['CoPipeline']['sync_on_add'])
