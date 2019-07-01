@@ -815,7 +815,8 @@ class CoPetition extends AppModel {
             foreach(array_keys($orgData[$m][$i]) as $a) {
               if($a != 'co_enrollment_attribute_id'
                  && isset($orgData[$m][$i][$a])
-                 && $orgData[$m][$i][$a] != '') {
+                 && $orgData[$m][$i][$a] != ''
+                 && !empty($orgData[$m][$i]['co_enrollment_attribute_id'])) {
                 $petitionAttrs['CoPetitionAttribute'][] = array(
                   'co_petition_id' => $coPetitionID,
                   'co_enrollment_attribute_id' => $orgData[$m][$i]['co_enrollment_attribute_id'],
@@ -860,7 +861,8 @@ class CoPetition extends AppModel {
           foreach(array_keys($coData[$m][$i]) as $a) {
             if($a != 'co_enrollment_attribute_id'
                && isset($coData[$m][$i][$a])
-               && $coData[$m][$i][$a] != '') {
+               && $coData[$m][$i][$a] != ''
+               && !empty($coData[$m][$i]['co_enrollment_attribute_id'])) {
               $petitionAttrs['CoPetitionAttribute'][] = array(
                 'co_petition_id' => $coPetitionID,
                 'co_enrollment_attribute_id' => $coData[$m][$i]['co_enrollment_attribute_id'],
@@ -1647,7 +1649,7 @@ class CoPetition extends AppModel {
       // We're keeping this for now for two possible use cases: batch loading of
       // org identities (CO-76) (with subsequent enrollment matching to existing org id)
       // and enrollment without org identities (CO-870).
-      
+
       try {
         $orgData = $this->validateModel('EnrolleeOrgIdentity', $requestData, $efAttrs);
       }
@@ -1689,7 +1691,10 @@ class CoPetition extends AppModel {
       
       if(!$CmpEnrollmentConfiguration->orgIdentitiesPooled())
         $orgData['EnrolleeOrgIdentity']['co_id'] = $petition['CoPetition']['co_id'];
-      
+
+      // if there is no PrimaryName, walk through the available Names
+      $this->checkModelForPrimaryName($orgData);
+
       // Save the Org Identity. All the data is validated, so don't re-validate it.
       
       if($this->EnrolleeOrgIdentity->saveAssociated($orgData, array("validate" => false,
@@ -1751,6 +1756,8 @@ class CoPetition extends AppModel {
       // Insert some additional attributes
       $coData['EnrolleeCoPerson']['co_id'] = $petition['CoPetition']['co_id'];
       $coData['EnrolleeCoPerson']['status'] = StatusEnum::Pending;
+
+      $this->checkModelForPrimaryName($coData);
       
       // Save the CO Person Data
       
@@ -3359,5 +3366,45 @@ class CoPetition extends AppModel {
     }
 
     return $token;
+  }
+
+  private function checkModelForPrimaryName(&$model) {
+    if(!isset($model['PrimaryName'])) {
+
+      if(!empty($model['Name'])) {
+        foreach($model['Name'] as $name) {
+          if($name['primary_name']) {
+            return;
+          }
+        }
+
+        // no primary name yet
+        foreach(array_keys($model['Name']) as $k) {
+          if($model['Name'][$k]['type'] == NameEnum::Preferred) {
+            $model['Name'][$k]['primary_name'] = true;
+            return;
+          }
+        }
+
+        foreach(array_keys($model['Name']) as $k) {
+          if($model['Name'][$k]['type'] == NameEnum::Official) {
+            $model['Name'][$k]['primary_name'] = true;
+            return;
+          }
+        }
+
+        foreach(array_keys($model['Name']) as $k) {
+          $model['Name'][$k]['primary_name'] = true;
+          return;
+        }
+      }
+
+      $name=array(
+        "type"=>NameEnum::Preferred,
+        "given" => "N.N.",
+        'primary_name'=>true
+      );
+      $model['Name'][]=$name;
+    }
   }
 }
