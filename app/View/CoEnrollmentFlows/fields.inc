@@ -573,18 +573,7 @@
       </li>
     </ul>
   </li>
-  <li>
-    <div class="field-name">
-      <div class="field-title">
-        <?php print ($e ? $this->Form->label('notify_from', _txt('fd.ef.efn')) : _txt('fd.ef.efn')); ?>
-      </div>
-      <div class="field-desc"><?php print _txt('fd.ef.efn.desc'); ?></div>
-    </div>
-    <div class="field-info">
-      <?php print ($e
-                   ? $this->Form->input('notify_from')
-                   : filter_var($co_enrollment_flows[0]['CoEnrollmentFlow']['notify_from'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
-    </div>
+  <?php print ($e ? $this->Form->input('notify_from', array('type'=>'hidden')) : ""); ?>
   </li>
   <li>
     <div class="field-name">
