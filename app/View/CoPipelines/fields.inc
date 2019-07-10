@@ -328,6 +328,17 @@
           </li>
           <li>
             <div class="field-name">
+              <div class="field-title"><?php print _txt('fd.pi.sync.link'); ?></div>
+            </div>
+            <div class="field-info checkbox">
+              <?php print ($e
+                           ? $this->Form->input('link_name') . ' ' .
+                             $this->Form->label('link_name', _txt('fd.pi.sync.link'))
+                           : (isset($co_pipelines[0]['CoPipeline']['link_name']) ? _txt('fd.yes') : _txt('fd.no'))); ?>
+            </div>
+          </li>
+          <li>
+            <div class="field-name">
               <div class="field-title"><?php print _txt('fd.pi.sync.role'); ?></div>
             </div>
             <div class="field-info checkbox">
@@ -561,7 +572,7 @@
             <li class="fields-submit">
               <div class="field-name"><span class="required"><?php print _txt('fd.req'); ?></span></div>
               <div class="field-info">
-                <?php print $this->Form->submit($submit_label, array('onClick' => 'on_submit()')); ?>
+                <?php print $this->Form->submit($submit_label); ?>
               </div>
             </li>
           </ul>

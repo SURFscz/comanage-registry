@@ -230,13 +230,6 @@ class EnrollmentDupeModeEnum
   const NewRoleCouCheck = 'C';
 }
 
-class EnrollmentFlowStatusEnum
-{
-  const Active              = 'A';
-  const Suspended           = 'S';
-  const Template            = 'T';
-}
-
 class EnrollmentMatchPolicyEnum {
   const Advisory  = "A";
   const Automatic = "M";
@@ -525,6 +518,10 @@ class ProvisioningActionEnum
   const CoPersonReprovisionRequested    = 'PR';
   const CoPersonUnexpired               = 'PY';
   const CoPersonUpdated                 = 'PU';
+  const CoServiceAdded                  = 'SA';
+  const CoServiceDeleted                = 'SD';
+  const CoServiceReprovisionRequested   = 'SR';
+  const CoServiceUpdated                = 'SU';
 }
 
 // The status of a provisioned target
@@ -588,8 +585,10 @@ class SshKeyTypeEnum
 {
   // Protocol v2
   const DSA         = 'DSA';
-  const ECDSA       = 'ECDSA';
-  const ED25519     = 'ed25519';
+  const ECDSA       = 'ecdsa-sha2-nistp256';
+  const ECDSA384    = 'ecdsa-sha2-nistp384';
+  const ECDSA521    = 'ecdsa-sha2-nistp521';
+  const ED25519     = 'ssh-ed25519';
   const RSA         = 'RSA';
   // Protocol v1
   const RSA1        = 'RSA1';
@@ -691,6 +690,25 @@ class TAndCLoginModeEnum
   const NotEnforced        = 'X';
   const RegistryLogin      = 'R';
   const DisableAllServices = 'D';
+}
+
+class TemplateableStatusEnum
+{
+  const Active              = 'A';
+  const Suspended           = 'S';
+  const Template            = 'T';
+
+  public static $from_api = array(
+    'Active'    => TemplateableStatusEnum::Active,
+    'Suspended' => TemplateableStatusEnum::Suspended,
+    'Template'  => TemplateableStatusEnum::Template
+  );
+
+  public static $to_api = array(
+    TemplateableStatusEnum::Active    => 'Active',
+    TemplateableStatusEnum::Suspended => 'Suspended',
+    TemplateableStatusEnum::Template  => 'Template'
+  );
 }
 
 class UrlEnum {
@@ -814,11 +832,13 @@ $name_ti = array(
 );
 
 $ssh_ti = array(
-  'DSA'     => 'ssh-dss',
-  'ECDSA'   => 'ecdsa-sha2-nistp256',
-  'ED25519' => 'ssh-ed25519',
-  'RSA'     => 'ssh-rsa',
-  'RSA1'    => 'ssh-rsa1'
+  'DSA'      => 'ssh-dss',
+  'ECDSA'    => 'ecdsa-sha2-nistp256',
+  'ECDSA384' => 'ecdsa-sha2-nistp384',
+  'ECDSA521' => 'ecdsa-sha2-nistp521',
+  'ED25519'  => 'ssh-ed25519',
+  'RSA'      => 'ssh-rsa',
+  'RSA1'     => 'ssh-rsa1'
 );
 
 $status_t = array(

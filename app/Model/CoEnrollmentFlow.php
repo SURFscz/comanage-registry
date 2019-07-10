@@ -126,6 +126,9 @@ class CoEnrollmentFlow extends AppModel {
       'required' => false,
       'allowEmpty' => true
     ),
+    'my_identity_shortcut' => array(
+      'rule' => 'boolean'
+    ),
     'co_pipeline_id' => array(
       'rule' => 'numeric',
       'required' => false,
@@ -269,9 +272,9 @@ class CoEnrollmentFlow extends AppModel {
                             EnrollmentDupeModeEnum::NewRoleCouCheck))
     ),
     'status' => array(
-      'rule' => array('inList', array(EnrollmentFlowStatusEnum::Active,
-                                      EnrollmentFlowStatusEnum::Suspended,
-                                      EnrollmentFlowStatusEnum::Template))
+      'rule' => array('inList', array(TemplateableStatusEnum::Active,
+                                      TemplateableStatusEnum::Suspended,
+                                      TemplateableStatusEnum::Template))
     )
   );
   
@@ -558,6 +561,17 @@ class CoEnrollmentFlow extends AppModel {
         $ret['collectIdentifier']['enabled'] = RequiredEnum::Required;
       } else {
         $ret['collectIdentifier']['enabled'] = RequiredEnum::NotPermitted;
+
+        if(!empty($ef['CoEnrollmentSource'])) {
+          // Walk the list of sources and look for at least one in Identify mode.
+          // Similar to the check a few lines above...
+          
+          foreach($ef['CoEnrollmentSource'] as $es) {
+            if($es['org_identity_mode'] == EnrollmentOrgIdentityModeEnum::OISIdentify) {
+              $ret['collectIdentifier']['enabled'] = RequiredEnum::Required;
+            }
+          }
+        }
       }
       
       $ret['checkEligibility']['role'] = EnrollmentRole::Enrollee;
@@ -652,6 +666,10 @@ class CoEnrollmentFlow extends AppModel {
       // that a notification will also go out
       $ret['provision']['label'] = _txt('ef.step.provision.notify');
     }
+
+    // Set values for the OIS related sub-steps
+    $ret['selectOrgIdentityAuthenticate'] = $ret['selectOrgIdentity'];
+    $ret['collectIdentifierIdentify'] = $ret['collectIdentifier'];
     
     return $ret;
   }
@@ -786,7 +804,7 @@ class CoEnrollmentFlow extends AppModel {
       'name'                    => _txt('fd.ef.tmpl.lnk'),
       'co_id'                   => $coId,
       'approval_required'       => false,
-      'status'                  => EnrollmentFlowStatusEnum::Template,
+      'status'                  => TemplateableStatusEnum::Template,
       'match_policy'            => EnrollmentMatchPolicyEnum::Self,
       'authz_level'             => EnrollmentAuthzEnum::CoPerson,
       'require_authn'           => true,
@@ -839,7 +857,7 @@ class CoEnrollmentFlow extends AppModel {
       'name'                    => _txt('fd.ef.tmpl.arl'),
       'co_id'                   => $coId,
       'approval_required'       => false,
-      'status'                  => EnrollmentFlowStatusEnum::Template,
+      'status'                  => TemplateableStatusEnum::Template,
       'match_policy'            => EnrollmentMatchPolicyEnum::Select,
       'authz_level'             => EnrollmentAuthzEnum::CoOrCouAdmin,
       'email_verification_mode' => VerificationModeEnum::None,
@@ -925,7 +943,7 @@ class CoEnrollmentFlow extends AppModel {
       'name'                    => _txt('fd.ef.tmpl.csp'),
       'co_id'                   => $coId,
       'approval_required'       => true,
-      'status'                  => EnrollmentFlowStatusEnum::Template,
+      'status'                  => TemplateableStatusEnum::Template,
       'match_policy'            => EnrollmentMatchPolicyEnum::Advisory,
       'authz_level'             => EnrollmentAuthzEnum::CoOrCouAdmin,
       'email_verification_mode' => VerificationModeEnum::None,
@@ -1054,7 +1072,7 @@ class CoEnrollmentFlow extends AppModel {
       'name'                    => _txt('fd.ef.tmpl.inv'),
       'co_id'                   => $coId,
       'approval_required'       => false,
-      'status'                  => EnrollmentFlowStatusEnum::Template,
+      'status'                  => TemplateableStatusEnum::Template,
       'match_policy'            => EnrollmentMatchPolicyEnum::None,
       'authz_level'             => EnrollmentAuthzEnum::CoOrCouAdmin,
       'email_verification_mode' => VerificationModeEnum::Review,
@@ -1159,7 +1177,7 @@ class CoEnrollmentFlow extends AppModel {
       'name'                    => _txt('fd.ef.tmpl.ssu'),
       'co_id'                   => $coId,
       'approval_required'       => true,
-      'status'                  => EnrollmentFlowStatusEnum::Template,
+      'status'                  => TemplateableStatusEnum::Template,
       'match_policy'            => EnrollmentMatchPolicyEnum::None,
       'authz_level'             => EnrollmentAuthzEnum::None,
       'email_verification_mode' => VerificationModeEnum::Review,

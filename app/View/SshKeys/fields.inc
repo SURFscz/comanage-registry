@@ -45,6 +45,8 @@
   } elseif(isset($this->request->data['SshKey']['co_person_id'])) {
     print $this->Form->hidden('co_person_id', array('default' => filter_var($this->request->data['SshKey']['co_person_id'],FILTER_SANITIZE_SPECIAL_CHARS))) . "\n";
     $idForBreadcrumbs = $this->request->data['SshKey']['co_person_id'];
+  } elseif(!empty($ssh_keys[0]['SshKey']['co_person_id'])) {
+    $idForBreadcrumbs = $ssh_keys[0]['SshKey']['co_person_id'];
   }
 
   // Add breadcrumbs
@@ -69,13 +71,83 @@
   $this->Html->addCrumb($crumbTxt);
 
 ?>
+<?php if($e): ?>
+<script>
+  $(document).ready(function() {
+    $('form .ssh_key-skey').on('change',function() {      
+        // check to see if the pasted text by chance contains a full SSH authorized key,
+        // including a type and a comment. If so, parse it and set the comment and type
+        // fields instead
+        var value = $.trim($(this).val());
+
+        var typeToCO = {
+          "ssh-dss": <?php echo json_encode(SshKeyTypeEnum::DSA); ?>,
+          "ssh-rsa": <?php echo json_encode(SshKeyTypeEnum::RSA); ?>,
+          "ssh-ed25519": <?php echo json_encode(SshKeyTypeEnum::ED25519); ?>,
+          "ecdsa-sha2-nistp256": <?php echo json_encode(SshKeyTypeEnum::ECDSA); ?>,
+          "ecdsa-sha2-nistp384": <?php echo json_encode(SshKeyTypeEnum::ECDSA384); ?>,
+          "ecdsa-sha2-nistp521": <?php echo json_encode(SshKeyTypeEnum::ECDSA521); ?>
+        };
+
+        if(value.indexOf(' ') !== -1) {
+
+          var values=value.split(' ');
+          var type = values[0];
+          var key = values.length > 1 ? values[1] : '';
+          var comment = values.length > 2 ? values[2] : '';
+          
+          // check the type and key
+          // type should be one of the ssh-<keytype> fields and key should
+          // only contain base64 characters
+          if(typeToCO[type]) {
+            $('.ssh_key-comment',$(this).parents('form')).val(comment);
+            $('.ssh_key-type',$(this).parents('form')).val(typeToCO[type]);
+            $('.ssh_key-skey',$(this).parents('form')).val(key);
+          }          
+        }
+        else if(value.match(/^[A-Za-z0-9\+\/]+=*$/) !== null) {
+
+          // no spaces, but we can determine the type on the base64 encoded key
+          var type=null;
+          if(value.indexOf('AAAAB3NzaC1kc3M') === 0) {
+            // ssh-dss => DSA
+            type='ssh-dss';
+          }
+          else if(value.indexOf('AAAAB3NzaC1yc2E') === 0) {
+            // ssh-rsa => RSA
+            type='ssh-rsa';
+          } 
+          else if(value.indexOf('AAAAC3NzaC1lZDI1NTE5') === 0) {
+            // ssh-ed25519
+            type='ssh-ed25519';
+          }
+          else if(value.indexOf('AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYA') === 0) {
+            // ecdsa-sha2-nistp256
+            type='ecdsa-sha2-nistp256';
+          }
+          else if(value.indexOf('AAAAE2VjZHNhLXNoYTItbmlzdHAzODQA') === 0) {
+            // ecdsa-sha2-nistp384
+            type='ecdsa-sha2-nistp384';
+          }
+          else if(value.indexOf('AAAAE2VjZHNhLXNoYTItbmlzdHA1MjEA') === 0) {
+            // ecdsa-sha2-nistp521
+            type='ecdsa-sha2-nistp521';
+          }
+          if(type !== null) {
+            $('.ssh_key-type',$(this).parents('form')).val(typeToCO[type]);
+          }
+        }
+    });
+  });
+</script>
+<?php endif; ?>
 <ul id="<?php print $this->action; ?>_ssh_key" class="fields form-list">
   <li>
     <div class="field-name">
       <?php print _txt('fd.sshkey.comment'); ?>
     </div>
     <div class="field-info">
-      <?php print ($e ? $this->Form->input('comment', array('class' => 'focusFirst')) : filter_var($ssh_keys[0]['SshKey']['comment'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
+      <?php print ($e ? $this->Form->input('comment', array('class' => 'focusFirst ssh_key-comment')) : filter_var($ssh_keys[0]['SshKey']['comment'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
     </div>
   </li>
   <li>
@@ -87,6 +159,7 @@
         global $cm_lang, $cm_texts;
         $attrs['value'] = (isset($ssh_keys) ? $ssh_keys[0]['SshKey']['type'] : SshKeyTypeEnum::DSA);
         $attrs['empty'] = false;
+        $attrs['class']='ssh_key-type';
 
         if($e) {
           print $this->Form->select('type',
@@ -97,7 +170,7 @@
             print $this->Form->error('type');
           }
         } else {
-          print filter_var($contact_t[ $ssh_keys[0]['SshKey']['type'] ],FILTER_SANITIZE_SPECIAL_CHARS);
+          print filter_var($cm_texts[ $cm_lang ]['en.sshkey.type'][ $ssh_keys[0]['SshKey']['type'] ],FILTER_SANITIZE_SPECIAL_CHARS);
         }
       ?>
     </div>
@@ -107,8 +180,12 @@
       <?php print _txt('fd.sshkey.skey'); ?>
     </div>
     <div class="field-info">
-      <?php print ($e
-                   ? $this->Form->input('skey')
+      <?php
+        $attrs=array();
+        $attrs['class']='ssh_key-skey';
+ 
+        print ($e
+                   ? $this->Form->input('skey',$attrs)
                    : filter_var($ssh_keys[0]['SshKey']['skey'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
     </div>
   </li>
@@ -130,7 +207,7 @@
   <ul id="<?php print $this->action; ?>_ssh_key_upload" class="fields form-list">
     <li>
       <div class="field-name">
-        <?php print _txt('fd.sshkey.skey'); ?>
+        <?php print _txt('op.upload.new', array(_txt('ct.ssh_keys.1'))); ?>
       </div>
       <div class="field-info">
         <?php

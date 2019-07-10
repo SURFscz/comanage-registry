@@ -492,7 +492,7 @@ original notification at
   
   'en.enrollment.orgid' => array(
     EnrollmentOrgIdentityModeEnum::OISAuthenticate    => 'Authenticate',
-    EnrollmentOrgIdentityModeEnum::OISClaim           => 'Claim',
+//    EnrollmentOrgIdentityModeEnum::OISClaim           => 'Claim',
     EnrollmentOrgIdentityModeEnum::OISIdentify        => 'Identify',
     EnrollmentOrgIdentityModeEnum::OISSearch          => 'Search',
     EnrollmentOrgIdentityModeEnum::OISSearchRequired  => 'Search, Required',
@@ -699,11 +699,13 @@ original notification at
   'en.sshkey.type' => array(
     SshKeyTypeEnum::DSA      => 'DSA',
     SshKeyTypeEnum::ECDSA    => 'ECDSA',
+    SshKeyTypeEnum::ECDSA384 => 'ECDSA384',
+    SshKeyTypeEnum::ECDSA521 => 'ECDSA521',
     SshKeyTypeEnum::ED25519  => 'ed25519',
     SshKeyTypeEnum::RSA      => 'RSA',
     SshKeyTypeEnum::RSA1     => 'RSA1'
   ),
-  
+
   'en.status' =>      array(StatusEnum::Active              => 'Active',
                             StatusEnum::Approved            => 'Approved',
                             StatusEnum::Confirmed           => 'Confirmed',
@@ -724,12 +726,6 @@ original notification at
     AuthenticatorStatusEnum::Expired              => 'Expired',
     AuthenticatorStatusEnum::Locked               => 'Locked',
     AuthenticatorStatusEnum::NotSet               => 'Not Set'
-  ),
-  
-  'en.status.ef' => array(
-    EnrollmentFlowStatusEnum::Active              => 'Active',
-    EnrollmentFlowStatusEnum::Suspended           => 'Suspended',
-    EnrollmentFlowStatusEnum::Template            => 'Template'
   ),
   
   'en.status.job' => array(
@@ -762,7 +758,7 @@ original notification at
     ProvisionerStatusEnum::Disabled       => 'Disabled'
   ),
   
-  'en.status.prov.desc' =>  'See <a href="https://spaces.internet2.edu/display/COmanage/Provisioning+From+Registry#ProvisioningFromRegistry-AddingaProvisioningTarget">the documentation</a> for mode information',
+  'en.status.prov.desc' =>  'See <a href="https://spaces.at.internet2.edu/display/COmanage/Provisioning+From+Registry#ProvisioningFromRegistry-AddingaProvisioningTarget">the documentation</a> for mode information',
 
   'en.status.prov.target' => array(
     ProvisioningStatusEnum::NotProvisioned => 'Not Provisioned',
@@ -787,6 +783,12 @@ original notification at
   'en.status.susp' => array(
     SuspendableStatusEnum::Active              => 'Active',
     SuspendableStatusEnum::Suspended           => 'Suspended'
+  ),
+  
+  'en.status.temp' => array(
+    TemplateableStatusEnum::Active              => 'Active',
+    TemplateableStatusEnum::Suspended           => 'Suspended',
+    TemplateableStatusEnum::Template            => 'Template'
   ),
   
   'en.sync.action' => array(
@@ -832,7 +834,7 @@ original notification at
     UrlEnum::Official => 'Official',
     UrlEnum::Personal => 'Personal',
   ),
-  
+
   'en.visibility' => array(
     VisibilityEnum::CoAdmin         => 'CO Admin',
     VisibilityEnum::CoGroupMember   => 'CO Group Member',
@@ -971,6 +973,7 @@ original notification at
   'er.ois.search.none' => 'No searchable backends were found',
   'er.ois.search.mail.none' => 'No records were found matching the email address "%1$s"',
   'er.ois.sync.full.inventory' => 'OIS backend is configured for full sync, but backend does not support inventory() call',
+  'er.ois.sync.login' => 'Error while logging in %1$s: %2$s',
   'er.ois.val.name' => 'Backend did not provide a valid Primary Name',
   'er.orgp.nomail' => '%1$s (Org Identity %2$s) has no known email address.<br />Add an email address and then try again.',
   'er.orgp.pool' =>   'Failed to pool organizational identities',
@@ -991,6 +994,7 @@ original notification at
   'er.prov.plugin' => 'Provisioning failed for %1$s: %2$s',
   'er.pt.dupe.cou' => 'The target CO Person already has a Role in the specified COU',
   'er.pt.duplicate' => 'The identifier "%1$s" is already attached to an identity enrolled in this CO. This petition has been flagged as a duplicate.',
+  'er.pt.mail' =>     'No email address found for %1$s to use for confirmation',
   'er.pt.readonly' => 'Petition is now read only (status=%1$s)',
   'er.pt.relink.org' => 'Could not automatically relink Org Identity due to another existing CO Person record',
   'er.pt.relink.role.c' => 'Could not automatically relink CO Person Role due to another existing CO Person record',
@@ -1049,7 +1053,7 @@ original notification at
   'fd.affil-a' =>     '%1$s Affiliation',
   'fd.affiliation' => 'Affiliation',
   'fd.affiliation.ep' => 'eduPersonAffiliation',
-  'fd.affiliation.ep.map.desc' => 'Map the extended affiliation to this eduPersonAffiliation, see <a href="https://spaces.internet2.edu/display/COmanage/Extending+the+Registry+Data+Model#ExtendingtheRegistryDataModel-%7B%7BeduPersonAffiliation%7D%7DandExtendedAffiliations">eduPersonAffiliation and Extended Affiliations</a>',
+  'fd.affiliation.ep.map.desc' => 'Map the extended affiliation to this eduPersonAffiliation, see <a href="https://spaces.at.internet2.edu/display/COmanage/Extending+the+Registry+Data+Model#ExtendingtheRegistryDataModel-%7B%7BeduPersonAffiliation%7D%7DandExtendedAffiliations">eduPersonAffiliation and Extended Affiliations</a>',
   'fd.all' =>         'All',
   'fd.an.desc' =>     'Alphanumeric characters only',
   'fd.approver' =>    'Approver',
@@ -1094,6 +1098,10 @@ original notification at
   'fd.dashboard.visibility.group' => 'Group',
   'fd.dashboard.primary' => 'Primary Dashboard',
   'fd.dashboard.primary.desc' => 'Default Dashboard for the CO landing page',
+  'fd.dashboard.header' => 'Header',
+  'fd.dashboard.header.desc' => 'Optional text to display at the top of a Dashboard, under the title. May contain HTML.',
+  'fd.dashboard.footer' => 'Footer',
+  'fd.dashboard.footer.desc' => 'Optional text to display at the bottom of a Dashboard. May contain HTML.',
   'fd.deleted' =>     'Deleted',
   // Demographics fields
   'fd.de.persid'  =>  'Person ID',
@@ -1123,7 +1131,7 @@ original notification at
   'fd.ea.ignauth.flow.desc' => 'Ignore authoritative values for attributes attached to this flow, such as those provided via environment variables, SAML, or LDAP (CMP Enrollment Attributes only, setting does not apply to Enrollment Sources)',
   'fd.ea.ignauth.desc' => 'Ignore authoritative values for this attribute, such as those provided via environment variables, SAML, or LDAP',
   'fd.ea.default_env' => 'Environment Variable For Default Value',
-  'fd.ea.default_env.desc' => 'If populated, the value of this environment variable will be used as the default value for this attribute (See also <a href="https://spaces.internet2.edu/x/mA39Bg#ConsumingExternalAttributesviaWebServerEnvironmentVariables-PopulatingDefaultValuesDuringEnrollment">this documentation</a>)',
+  'fd.ea.default_env.desc' => 'If populated, the value of this environment variable will be used as the default value for this attribute (See also <a href="https://spaces.at.internet2.edu/display/COmanage/Consuming+External+Attributes+via+Web+Server+Environment+Variables#ConsumingExternalAttributesviaWebServerEnvironmentVariables-PopulatingDefaultValuesDuringEnrollment">this documentation</a>)',
   'fd.ea.desc'    =>  'Description',
   'fd.ea.desc.desc' => 'Descriptive text to be displayed when prompting for this attribute (like this text you\'re reading now)',
   'fd.ea.label'   =>  'Label',
@@ -1137,6 +1145,8 @@ original notification at
   'fd.ed.default' =>  'Default Value',
   'fd.ed.modify'  =>  'Modifiable',
   'fd.ed.modify.desc' => 'If false, the Petitioner cannot change the default value placed into the Petition',
+  'fd.ed.default_oi' => 'Take default from OrgIdentitySource',
+  'fd.ed.default_oi.desc' => 'If checked, try to find a default value on any attached OrgIdentitySource record for this petitioner if no default was found through environment values.',
   'fd.ef.aea' =>      'Require Authentication For Administrator Enrollment',
   'fd.ef.aea.desc' => 'If administrator enrollment is enabled, require enrollees to authenticate to the platform in order to complete their enrollment',
   'fd.ef.aee' =>      'Require Email Confirmation For Administrator Enrollment',
@@ -1154,11 +1164,11 @@ original notification at
   'fd.ef.authn' =>    'Require Enrollee Authentication',
   'fd.ef.authn.desc' => 'Require enrollee to authenticate in order to complete their enrollment',
   'fd.ef.authz' =>    'Petitioner Enrollment Authorization',
-  'fd.ef.authz.desc' => 'Authorization required to execute this enrollment flow, see <a href="https://spaces.internet2.edu/display/COmanage/Registry+Enrollment+Flow+Configuration#RegistryEnrollmentFlowConfiguration-EnrollmentAuthorization">Enrollment Authorization</a> for details',
+  'fd.ef.authz.desc' => 'Authorization required to execute this enrollment flow, see <a href="https://spaces.at.internet2.edu/display/COmanage/Registry+Enrollment+Flow+Configuration#RegistryEnrollmentFlowConfiguration-EnrollmentAuthorization">Enrollment Authorization</a> for details',
   'fd.ef.authz.group' => 'Group',
   'fd.ef.authz.cou' => 'COU',
   'fd.ef.ce' =>       'Email Confirmation Mode',
-  'fd.ef.ce.desc' =>  'See <a href="https://spaces.internet2.edu/x/RAGnAQ#RegistryEnrollmentFlowConfiguration-EmailVerification(Confirmation)andAuthentication">Email Verification</a> for mode definitions',
+  'fd.ef.ce.desc' =>  'See <a href="https://spaces.at.internet2.edu/display/COmanage/Registry+Enrollment+Flow+Configuration#RegistryEnrollmentFlowConfiguration-EmailVerification">Email Verification</a> for mode definitions',
   'fd.ef.coef' =>     'Enable Organizational Attributes Via CO Enrollment Flow',
   'fd.ef.coef.desc' => 'If enabled, allow organizational identity attributes to be collected via forms during CO enrollment flows (these attributes will be less authoritative than those obtained via LDAP or SAML, however those options are not currently supported)',
   'fd.ef.concl' =>    'Conclusion',
@@ -1166,7 +1176,7 @@ original notification at
   'fd.ef.dupe'     => 'Duplicate Enrollment Mode',
   'fd.ef.dupe.desc' => 'How to handle automatically detected duplicate enrollments',
   'fd.ef.eds.help' => 'EDS Help URL',
-  'fd.ef.eds.help.desc' => 'Help URL presented by the <a href="https://spaces.internet2.edu/x/QIhRBQ">Embedded Discovery Service</a> (EDS)',
+  'fd.ef.eds.help.desc' => 'Help URL presented by the <a href="https://spaces.at.internet2.edu/display/COmanage/Configuring+the+Shibboleth+Embedded+Discovery+Service+Plugin">Embedded Discovery Service</a> (EDS)',
   'fd.ef.eds.hide' => 'IdPs to hide from the EDS',
   'fd.ef.eds.hide.desc' => 'List of entity IDs representing IdPs that should not be offered via the EDS, one per line',
   'fd.ef.eds.prefer' => 'IdPs to prefer for the EDS',
@@ -1188,7 +1198,7 @@ original notification at
   'fd.ef.ldap' =>     'Enable LDAP Attribute Retrieval',
   'fd.ef.ldap.desc' => 'If the enrollee is affiliated with an organization with a known LDAP server, query the LDAP server for authoritative attributes',
   'fd.ef.match' =>    'Identity Matching',
-  'fd.ef.match.desc' => 'Identity Matching policy for this enrollment flow, see <a href="https://spaces.internet2.edu/display/COmanage/Registry+Enrollment+Flow+Configuration#RegistryEnrollmentFlowConfiguration-IdentityMatching">Identity Matching</a> for details',
+  'fd.ef.match.desc' => 'Identity Matching policy for this enrollment flow, see <a href="https://spaces.at.internet2.edu/display/COmanage/Registry+Enrollment+Flow+Configuration#RegistryEnrollmentFlowConfiguration-IdentityMatching">Identity Matching</a> for details',
   'fd.ef.noa' =>      'Notify On Active Status',
   'fd.ef.noa.desc' => 'Email address to notify upon status being set to active',
   'fd.ef.noap' =>     'Notify On Approved Status',
@@ -1198,11 +1208,11 @@ original notification at
   'fd.ef.nogr' =>     'Notification Group',
   'fd.ef.nogr.desc' => 'Group to notify on new petitions and changes of petition status. (This is an informational notification. Separate notifications will be sent to approvers and enrollees, as appropriate.)',
   'fd.ef.orgid' =>    'Org Identity Mode',
-  'fd.ef.orgid.desc' => 'Org Identity mode for this enrollment flow, see <a href="https://spaces.internet2.edu/display/COmanage/Registry+Enrollment+Flow+Configuration#RegistryEnrollmentFlowConfiguration-OrganizationalIdentitySources">Organizational Identity Sources</a> for details',
+  'fd.ef.orgid.desc' => 'Org Identity mode for this enrollment flow, see <a href="https://spaces.at.internet2.edu/display/COmanage/Registry+Enrollment+Flow+Configuration#RegistryEnrollmentFlowConfiguration-OrganizationalIdentitySources">Organizational Identity Sources</a> for details',
   'fd.ef.orgid.sn' => 'Verify Family Name',
   'fd.ef.orgid.sn.desc' => 'If set, the family name of the retrieved Org Identity Source record must have a family name associated with the Petitioner CO Person record',
   'fd.ef.pool' =>     'Pool Organizational Identities',
-  'fd.ef.pool.desc' => 'If <a href="https://spaces.internet2.edu/display/COmanage/Organizational+Identity+Pooling">pooling is enabled</a>, organizational identities -- as well as any attributes released by IdPs -- will be made available to all COs, regardless of which CO enrollment flows added them (This setting can no longer be changed)',
+  'fd.ef.pool.desc' => 'If <a href="https://spaces.at.internet2.edu/display/COmanage/Organizational+Identity+Pooling">pooling is enabled</a>, organizational identities -- as well as any attributes released by IdPs -- will be made available to all COs, regardless of which CO enrollment flows added them (This setting can no longer be changed)',
   'fd.ef.pool.on.warn' => 'Enabling pooling will delete any existing links between organizational identities and the COs which created them (when you click Save). This operation cannot be undone.',
   'fd.ef.pool.off.warn' => 'Disabling pooling will duplicate any organizational identities used by more than one CO (when you click Save). This operation cannot be undone.',
   'fd.ef.px' =>       'Provisioning Executable',
@@ -1217,8 +1227,10 @@ original notification at
   'fd.ef.saml.desc' => 'If the enrollee is authenticated via a SAML IdP with attributes released, examine the SAML assertion for authoritative attributes',
   'fd.ef.sea' =>      'Require Authentication For Self Enrollment',
   'fd.ef.sea.desc' => 'If self enrollment is enabled, require enrollees who are self-enrolling to authenticate to the platform',
+  'fd.ef.shortcut' => 'Enable My Identity Shortcut',
+  'fd.ef.shortcut.desc' => 'If the current user is authorized to start the flow, display a link to the flow from the "My Identity" menu',
   'fd.ef.tandc' =>    'Terms and Conditions Mode',
-  'fd.ef.tandc.desc' => 'How to handle Terms and Conditions at enrollment, if any are defined. See <a href="https://spaces.internet2.edu/display/COmanage/Registry+Terms+and+Conditions">Terms and Conditions</a>',
+  'fd.ef.tandc.desc' => 'How to handle Terms and Conditions at enrollment, if any are defined. See <a href="https://spaces.at.internet2.edu/display/COmanage/Registry+Terms+and+Conditions">Terms and Conditions</a>',
   'fd.ef.vbody' =>    'Verification Email Body',
   'fd.ef.vbody.desc' => 'Body for email message sent as part of verification step. Max 4000 characters.',
   'fd.ef.vmt' =>      'Verification Email Message Template',
@@ -1275,13 +1287,14 @@ original notification at
   'fd.ia.exclusions' => 'Exclusions',
   'fd.ia.exclusions.desc' => '(Not yet implemented)',
   'fd.ia.format' =>   'Format',
-  'fd.ia.format.desc' => 'See <a href="https://spaces.internet2.edu/display/COmanage/Configuring+Registry+Identifier+Assignment">Configuring Registry Identifier Assignment</a> for details',
+  'fd.ia.format.desc' => 'See <a href="https://spaces.at.internet2.edu/display/COmanage/Configuring+Registry+Identifier+Assignment">Configuring Registry Identifier Assignment</a> for details',
   'fd.ia.format.prefab' => 'Select a Common Pattern',
   'fd.ia.format.pattern' => 'Pattern',
   'fd.ia.format.p0' => 'Default (#)',
   'fd.ia.format.p1' => 'given.family(.#)@myvo.org',
   'fd.ia.format.p2' => 'given(.m).family(.#)@myvo.org',
   'fd.ia.format.p3' => 'gmf#@myvo.org',
+  'fd.ia.format.p4' => 'uid@co',
   'fd.ia.maximum' =>  'Maximum',
   'fd.ia.maximum.desc' => 'The maximum value for randomly generated identifiers',
   'fd.ia.minimum' =>  'Minimum',
@@ -1327,10 +1340,10 @@ original notification at
   'fd.modified' =>    'Modified',
   'fd.modified.tz' => 'Modified (%1$s)',
   'fd.mt.body' =>     'Message Body',
-  'fd.mt.body.desc' => 'Body for message to be sent. Max 4000 characters, see <a href="https://spaces.internet2.edu/x/pAADAw">supported substitutions</a>.',
+  'fd.mt.body.desc' => 'Body for message to be sent. Max 4000 characters, see <a href="https://spaces.at.internet2.edu/display/COmanage/Notification+Message+Substitutions">supported substitutions</a>.',
   'fd.mt.context' =>  'Message Context',
   'fd.mt.sub' =>      'Message Subject',
-  'fd.mt.sub.desc' => 'Subject line for message to be sent. See <a href="https://spaces.internet2.edu/x/pAADAw">supported substitutions</a>.',
+  'fd.mt.sub.desc' => 'Subject line for message to be sent. See <a href="https://spaces.at.internet2.edu/display/COmanage/Notification+Message+Substitutions">supported substitutions</a>.',
   'fd.name' =>        'Name',
   'fd.name-a' =>      '%1$s Name',
   'fd.name.affil'  => 'Name and Affiliation',
@@ -1421,6 +1434,7 @@ original notification at
   'fd.pi.sync.role' => 'Create CO Person Role Record',
   'fd.pi.sync.str' => 'Sync Strategy',
   'fd.pi.sync.upd' => 'Sync on Update',
+  'fd.pi.sync.link' => 'Link Name',
   'fd.pipeline' =>    'Pipeline',
   'fd.pipeline.desc.ef' => 'Org Identities created directly (not via an Org Identity Source) from this Enrollment Flow will be processed using the specified Pipeline',
   'fd.pipeline.desc.ois' => 'Org Identities created from this Source will be processed using the specified Pipeline',
@@ -1509,10 +1523,12 @@ original notification at
   'fd.tc.agree.no' => 'Not Agreed',
   'fd.tc.agree.yes' => 'Agreed',
   'fd.tc.archived' => 'The definition of this T&C changed after the agreement was recorded',
+  'fd.tc.body' => 'Inline T&C',
+  'fd.tc.body.desc' => 'Terms and Conditions for inline rendering. If provided, overrides and overwrites the URL',
   'fd.tc.cou.desc' => 'If set, this T&C only applies to members of the specified COU',
   'fd.tc.for' =>      'Terms and Conditions for %1$s (%2$s)',
   'fd.tc.mode.login' => 'Terms and Conditions Mode',
-  'fd.tc.mode.login.desc' => 'How to handle Terms and Conditions at login, if any are defined. See <a href="https://spaces.internet2.edu/display/COmanage/Registry+Terms+and+Conditions">Terms and Conditions</a>',
+  'fd.tc.mode.login.desc' => 'How to handle Terms and Conditions at login, if any are defined. See <a href="https://spaces.at.internet2.edu/display/COmanage/Registry+Terms+and+Conditions">Terms and Conditions</a>',
   'fd.tc.none' =>     'There are no applicable Terms and Conditions',
   'fd.tc.url.desc' => 'The URL to the Terms and Conditions, which will be displayed in a popup',
   'fd.tc.order'   =>  'Order',
@@ -1553,6 +1569,13 @@ original notification at
   'fd.url.url' =>     'URL',
   'fd.url.url.desc' => 'URL, including protocol (ie: http://myvo.org, not just myvo.org)',
   'fd.url' =>         'URL',
+  'fd.ssh_key' =>     'SSH Key',
+  'fd.ssh_key.comment' => 'Comment',
+  'fd.ssh_key.comment.desc' =>     'Description of this SSH key',
+  'fd.ssh_key.type' => 'Key type',
+  'fd.ssh_key.type.desc' =>     'Type of key',
+  'fd.ssh_key.skey' => 'SSH Key',
+  'fd.ssh_key.skey.desc' =>     'SSH key content',
   'fd.username.api' => 'API User Name',
   'fd.valid_from' =>  'Valid From',
   'fd.valid_from.desc' => 'Leave blank for immediate validity',
@@ -1617,18 +1640,23 @@ original notification at
   'in.orgid.pi.group'  => '%1$s Group Membership created from this Org Identity via Pipeline',
   'in.pagination.format' =>  'Page {:page} of {:pages}, Viewing {:start}-{:end} of {:count}',
   'in.pl.noconfig'     => 'This provisioner has no configurable options',
+  'in.widgets.none'    => 'No widgets have been created for this dashboard yet.',
   
   // Menu
   'me.account'         => 'My Account',
   'me.changepassword'  => 'Change Password',
   'me.collaborations'  => 'Collaborations',
   'me.configuration'   => 'Configuration',
+  'me.flows'           => 'Available Enrollment Flows',
   'me.identity.for'    => 'My %1$s Identity',
+  'me.invite'          => 'Invite Members',
   'me.label'           => 'Manage:',
+  'me.orgids'          => 'My Organizational Identities',
   'me.people'          => 'People',
   'me.platform'        => 'Platform',
   'me.population'      => 'My Population',
   'me.population.cou'  => 'My %1$s Population',
+  'me.profile.for'     => 'My Profile (%1$s)',
   'me.tandc'           => 'Terms and Conditions',
 
   // Breadcrumbs
@@ -1748,6 +1776,7 @@ original notification at
   'op.inv' =>         'Invite',
   'op.inv-a' =>       'Invite %1$s',
   'op.inv-t' =>       'Invite %1$s to %2$s',
+  'op.inv.new' =>     'Invite new CO participant',
   'op.inv.reply' =>   'Reply to Invitation',
   'op.inv.resend' =>  'Resend Invite',
   'op.inv.resend.to' =>  'Resend Invite to %1$s',
@@ -1797,7 +1826,7 @@ original notification at
   'op.proceed.ok' =>  'Are you sure you wish to proceed?',
   'op.prov' =>        'Provision',
   'op.prov.all' =>    'Reprovision All',
-  'op.prov.all.confirm' => 'Are you sure you wish to (re)provision all records? This will affect %1$s CO People and %2$s CO Groups.',
+  'op.prov.all.confirm' => 'Are you sure you wish to (re)provision all records? This will affect %1$s CO People, %2$s CO Groups, %3$s CO Email Lists and %4$s Co Services.',
   'op.prov.confirm' => 'Are you sure you wish to (re)provision this record?',
   'op.prov.view' =>   'Provisioned Services',
   'op.prov.wait' =>   'Requesting provisioning, please wait...',
@@ -2043,6 +2072,16 @@ original notification at
   'sh.ug.110.gr' =>       'Renaming and reconciling automatic groups (please wait, this may take some time)',
   'sh.ug.110.is' =>       'Updating inactive identifier status',
   'sh.ug.310.url' =>      'Instantiating default URL Extended Types',
+  'sh.pr.arg.coid' =>     'Numeric CO ID to (re)provision (all COs if not specified)',
+  'sh.pr.arg.provisioner' => 'Name of the provisioner to run (all if not specified)',
+  'sh.pr.arg.type' =>     'Name of the provisioner plugin type (all plugins if not specified)',
+  'sh.pr.arg.epilog' =>   "If no provisioner is specified, all run.",
+  'sh.pr.action' =>       'Provisioning \'%1$s\' (%2$d) through \'%3$s\' (%4$s)',
+  'sh.pr.done' =>         "Provisioning finished.",
+  'sh.pr.err.noco' =>     "No CO specified or found",
+  'sh.pr.warn.noprov' =>  'CO \'%1$s\' (%2$d) does not specify any valid provisioners',
+  'sh.pr.warn.unknown' => 'Model %1$s (id %2$d/%3$s) not found, skipping',
+  'sh.pr.warn.unknown2' =>'Unknown error encountered while provisioning model %1$s (id %2$d/%3$s): %4$s',
 );
 
 // Make a copy of the original texts, since CoLocalizations can override them

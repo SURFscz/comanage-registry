@@ -56,7 +56,7 @@ function generateFlash(text, type) {
 // For dynamically created elements, we can generate the spinner
 // dynamically by calling this function.
 
-// Set defaults - this is used by all spinners.
+// Set defaults - this is used by all full-page spinners.
 var coSpinnerOpts = {
   lines: 13, // The number of lines to draw
   length: 20, // The length of each line
@@ -73,6 +73,27 @@ var coSpinnerOpts = {
   className: 'spinner', // The CSS class to assign to the spinner
   zIndex: 100 // The z-index (defaults to 2000000000)
 };
+
+// Set defaults - this is used by all mini (localized) spinners.
+var coMiniSpinnerOpts = {
+  lines: 10, // The number of lines to draw
+  length: 4, // The length of each line
+  width: 2, // The line thickness
+  radius: 2, // The radius of the inner circle
+  corners: 0.2, // Corner roundness (0..1)
+  rotate: 0, // The rotation offset
+  direction: 1, // 1: clockwise, -1: counterclockwise
+  color: '#9FC6E2', // #rgb or #rrggbb or array of colors
+  speed: 1.2, // Rounds per second
+  trail: 60, // Afterglow percentage
+  shadow: false, // Whether to render a shadow
+  hwaccel: false, // Whether to use hardware acceleration
+  className: 'mini-spinner', // The CSS class to assign to the spinner
+  zIndex: 100, // The z-index (defaults to 2000000000)
+  top: '18px', // Positioning offset
+  left: '18px' // Positioning offset
+};
+
 
 // show a spinner
 function displaySpinner() {
@@ -195,7 +216,7 @@ function gotoPage(pageNumber,maxPage,intErrMsg,maxErrMsg) {
 // pageLimit         - page limit                            (int, required)
 // recordCount       - total number of records returned      (int, requried)
 // currentPage       - current page number                   (int, required)
-function limitPage(pageLimit,recordCount,currentPage) {
+function limitPage(currentUrl, pageLimit,recordCount,currentPage) {
   var limit = parseInt(pageLimit,10);
   var count = parseInt(recordCount,10);
   var page = parseInt(currentPage,10);
@@ -207,7 +228,6 @@ function limitPage(pageLimit,recordCount,currentPage) {
   }
 
   // Add the new limit parameter to the url
-  var currentUrl =  window.location.pathname;
   currentUrl = currentUrl.replace(new RegExp('\/limit:[0-9]*', 'g'), '')+'/limit:' + limit;
 
   // Test to see if the new limit allows the current page to exist

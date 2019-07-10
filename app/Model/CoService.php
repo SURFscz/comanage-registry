@@ -34,6 +34,7 @@ class CoService extends AppModel {
   
   // Add behaviors
   public $actsAs = array('Containable',
+                         'Provisioner',
                          'Changelog' => array('priority' => 5));
   
   // Association rules from this model to other models
@@ -80,7 +81,8 @@ class CoService extends AppModel {
       'allowEmpty' => true
     ),
     'service_url' => array(
-      'rule' => array('url', true),
+      // We can't set this to 'url' because url validation doesn't understand ssh:
+      'rule' => array('validateInput'),
       'required' => false,
       'allowEmpty' => true
     ),
@@ -233,7 +235,7 @@ class CoService extends AppModel {
     $args['contain'] = false;
     
     $services = $this->find('all', $args);
-    $groupIds = null;
+    $groupIds = array();
     
     if(!empty($groups) && !empty($services) && $coPersonId) {
       // If $coPersonId is not set, there won't be any services with a CoGroupMember visibility

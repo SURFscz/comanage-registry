@@ -152,6 +152,7 @@ class CoIdentifierAssignment extends AppModel {
    */
   
   public function assign($coIdentifierAssignment, $coPersonID, $actorCoPersonID, $provision=true) {
+
     $ret = null;
     
     // Determine if we are actually assigning an email address instead of an identifier.
@@ -174,10 +175,12 @@ class CoIdentifierAssignment extends AppModel {
     $args['conditions']['CoPerson.id'] = $coPersonID;
     $args['contain'][] = 'PrimaryName';
     $args['contain'][] = 'Identifier';
+    $args['contain'][] = 'Co';
     
     $coPerson = $this->Co->CoPerson->find('first', $args);
     
     if(empty($coPerson)) {
+
       $dbc->rollback();
       throw new InvalidArgumentException(_txt('er.notfound',
                                          array(_txt('ct.co_people.1'),
@@ -213,7 +216,7 @@ class CoIdentifierAssignment extends AppModel {
     }
     
     $base = $this->substituteParameters($iaFormat,
-                                        $coPerson['PrimaryName'],
+                                        $coPerson,
                                         $coIdentifierAssignment['CoIdentifierAssignment']['permitted']);
     
     // Now that we've got our base, loop until we get a unique identifier.
@@ -481,8 +484,9 @@ class CoIdentifierAssignment extends AppModel {
    * @return String Identifier with paramaters substituted
    */
   
-  private function substituteParameters($format, $name, $permitted) {
+  private function substituteParameters($format, $coPerson, $permitted) {
     $base = "";
+    $name = $coPerson['PrimaryName'];
     
     // Loop through the format string
     for($i = 0;$i < strlen($format);$i++) {
@@ -500,20 +504,41 @@ class CoIdentifierAssignment extends AppModel {
             // Move past '('
             $i++;
             
-            $width = "";
+            $type = $format[$i];
+            $i++;
             
-            // Check if the next character is a width specifier
-            if($format[$i+1] == ':') {
-              // Don't advance $i yet since we still need it, so use $j instead
-              for($j = $i+2;$j < strlen($format);$j++) {
-                if($format[$j] != ')') {
-                  $width .= $format[$j];
-                } else {
-                  break;
-                }
+            $width="";
+            $named="";
+
+            if($format[$i] == ':') {
+              $i++;
+              // read parameters, colon separated
+              $params = "";
+              while($format[$i] != ')' && $format[$i]) {
+                $params .= $format[$i];
+                $i++;
+              }
+
+              $param = explode(':',$params);
+
+              if(sizeof($param) > 0) {
+                $width = $param[0];
+              }
+              if(sizeof($param) > 1) {
+                $named = $param[1];
+              }
+              if(!is_numeric($width)) {
+                $named = $width;
+                $width="";
               }
             }
-            
+            else {
+              // skip everything until the closing bracket
+              while($format[$i] != ')' && $format[$i]) {
+                $i++;
+              }
+            }
+
             // Do the actual parameter replacement, blocking out characters that aren't permitted
             
             if($permitted) {
@@ -521,45 +546,41 @@ class CoIdentifierAssignment extends AppModel {
               $charregex = '/'. _txt('en.chars.permitted.re.not', null, $permitted) . '/';
             }
             
-            switch($format[$i]) {
-              case 'f':
-                $base .= sprintf("%.".$width."s",
-                                 preg_replace($charregex, '', strtolower($name['family'])));
-                break;
-              case 'F':
-                $base .= sprintf("%.".$width."s",
-                                 preg_replace($charregex, '', $name['family']));
-                break;
-              case 'g':
-                $base .= sprintf("%.".$width."s",
-                                 preg_replace($charregex, '', strtolower($name['given'])));
-                break;
-              case 'G':
-                $base .= sprintf("%.".$width."s",
-                                 preg_replace($charregex, '', $name['given']));
-                break;
-              case 'm':
-                $base .= sprintf("%.".$width."s",
-                                 preg_replace($charregex, '', strtolower($name['middle'])));
-                break;
-              case 'M':
-                $base .= sprintf("%.".$width."s",
-                                 preg_replace($charregex, '', $name['middle']));
-                break;
-              case '#':
-                // Convert the collision number parameter to a sprintf style specification,
-                // left padded with 0s. Note that assignCollisionNumber expects %s, not %d.
-                $base .= "%" . ($width != "" ? ("0" . $width . "." . $width) : "") . "s";
-                break;
+            if($type == '#') {
+              // Convert the collision number parameter to a sprintf style specification,
+              // left padded with 0s. Note that assignCollisionNumber expects %s, not %d.
+              $base .= "%" . ($width != "" ? ("0" . intval($width) . "." . intval($width)) : "") . "s";
             }
-            
-            // Move past the width specifier
-            if($width != "") {
-              $i += strlen($width) + 1;
+            else {
+              $value = "";
+
+              switch($type) {
+                case 'f': $value = strtolower($name['family']); break;
+                case 'F': $value = $name['family']; break;
+                case 'g': $value = strtolower($name['given']); break;
+                case 'G': $value = $name['given']; break;
+                case 'm': $value = strtolower($name['middle']); break;
+                case 'M': $value = $name['middle']; break;
+                case 'I':
+                  if(!empty($named)) {
+                    $named=strtolower($named);
+                    // search for an identifier of the named type
+                    foreach($coPerson['Identifier'] as $identifier) {
+                      if(strtolower($identifier['type']) == $named) {
+                        $value = $identifier['identifier'];
+                        break;
+                      }
+                    }
+                  }
+                  break;
+                case 'C': $value = $coPerson['Co']['name']; break;
+              }
+
+              if(!empty($value)) {
+                $value = preg_replace($charregex, '', $value);
+                $base .= sprintf("%.".$width."s", $value);
+              }
             }
-            
-            // Move past the ')'
-            $i++;
           }
           break;
         default:
@@ -568,7 +589,7 @@ class CoIdentifierAssignment extends AppModel {
           break;
       }
     }
-    
+
     return $base;
   }
   

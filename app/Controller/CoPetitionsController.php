@@ -469,11 +469,11 @@ class CoPetitionsController extends StandardController {
               }
             }
           }
-          
+
           $enrollmentAttributes = $this->CoPetition
                                        ->CoEnrollmentFlow
                                        ->CoEnrollmentAttribute
-                                       ->mapEnvAttributes($enrollmentAttributes, array());
+                                       ->mapEnvAttributes($enrollmentAttributes, array(), $this->parseCoPetitionId());
         }
         
         $this->set('co_enrollment_attributes', $enrollmentAttributes);
@@ -600,6 +600,11 @@ class CoPetitionsController extends StandardController {
       $this->redirect("/");
     }
     
+    // Determine the current CO Person ID, who at this point is presumed to be the
+    // Actor since we're in an Enrollee driven phase of enrollment.
+   
+    $enrolleeCoPersonId = $this->CoPetition->field('enrollee_co_person_id', array('CoPetition.id' => $id));
+    
     // Construct a redirect URL
     $onFinish = $this->generateDoneRedirect('collectIdentifier', $id, null, $oiscfg['OrgIdentitySource']['id']);
     $this->set('vv_on_finish_url', $onFinish);
@@ -607,7 +612,7 @@ class CoPetitionsController extends StandardController {
     $fname = "execute_plugin_collectIdentifierIdentify";
     
     try {
-      $this->$fname($id, $oiscfg, $onFinish, $this->Session->read('Auth.User.co_person_id'));
+      $this->$fname($id, $oiscfg, $onFinish, $enrolleeCoPersonId);
     }
     catch(Exception $e) {
       $this->Flash->set($e->getMessage(), array('key' => 'error'));
@@ -616,7 +621,7 @@ class CoPetitionsController extends StandardController {
       $this->CoPetition
            ->CoPetitionHistoryRecord
            ->record($id,
-                    $this->Session->read('Auth.User.co_person_id'),
+                    $enrolleeCoPersonId,
                     PetitionActionEnum::StepFailed,
                     $e->getMessage());
            
@@ -661,7 +666,7 @@ class CoPetitionsController extends StandardController {
     $status = $this->CoPetition->CoEnrollmentFlow->field('status',
                                                          array('CoEnrollmentFlow.id' => $efId));
     
-    if($status != EnrollmentFlowStatusEnum::Active) {
+    if($status != TemplateableStatusEnum::Active) {
       $this->Flash->set(_txt('er.ef.active'), array('key' => 'error'));
       $this->performRedirect();
     }
@@ -741,6 +746,11 @@ class CoPetitionsController extends StandardController {
             $redirect['token'] = $token;
           }
           
+          // If we're in the start step and a return URL is present, insert that
+          if($step == 'start' && !empty($this->request->params['named']['return'])) {
+            $redirect['return'] = $this->request->params['named']['return'];
+          }
+          
           $this->redirect($redirect);
           break;
         }
@@ -756,6 +766,10 @@ class CoPetitionsController extends StandardController {
         
         // Generate hint URL for where to go when the step is completed
         $onFinish = $this->generateDoneRedirect($step, $id, $curPlugin);
+        if($step == "start" && !empty($this->request->params['named']['return'])) {
+          $onFinish['return'] = $this->request->params['named']['return'];
+        }
+
         $this->set('vv_on_finish_url', $onFinish);
         
         // Run the step
@@ -781,7 +795,7 @@ class CoPetitionsController extends StandardController {
             // Log the error into the petition history
             $this->CoPetition
                  ->CoPetitionHistoryRecord
-                 ->record($coPetitionId,
+                 ->record($id,
                           $this->Session->read('Auth.User.co_person_id'),
                           PetitionActionEnum::StepFailed,
                           $e->getMessage());
@@ -816,6 +830,10 @@ class CoPetitionsController extends StandardController {
           
           // Make sure we don't issue a redirect
           return;
+        } elseif($steps[$step]['enabled'] == RequiredEnum::Optional) {
+          // Redirect into the plugins to see if any want to run
+          
+          $this->redirect($onFinish);
         }
       }
     }
@@ -863,7 +881,17 @@ class CoPetitionsController extends StandardController {
           // We use base64 to avoid weird parsing errors with partially
           // visible URLs in a URL.
           
-          $returnUrl = base64_decode($this->request->params['named']['return']);
+          // base64 encoding can generate some HTML special characters.
+          // We could urlencode, but that creates various confusion with different
+          // parts of the web transaction possibly urldecoding prematurely, so
+          // instead we substitute the problematic characters with others. See
+          // discussion in CO-1667 and https://stackoverflow.com/questions/1374753/passing-base64-encoded-strings-in-url
+          $returnUrl = base64_decode(str_replace(array(".", "_", "-"),
+                                                 // This mapping is the same as the one used by the YUI library.
+                                                 // RFC 4648 base64url is another option, but strangely doesn't
+                                                 // map the padding character (=).
+                                                 array("+", "/", "="),
+                                                 $this->request->params['named']['return']));
         }
         
         $ptid = $this->CoPetition->initialize($efId,
@@ -974,14 +1002,14 @@ class CoPetitionsController extends StandardController {
                                              $id,
                                              $newOrgId['OrgIdentitySourceRecord']['org_identity_id'],
                                              $this->Session->read('Auth.User.co_person_id'));
-          // If there is already a CO Person attached to the Petition (from selectEnrollee),
-          // create a CoOrgIdentityLink for that CO Person to this Org Identity.
-          // (This would typically be for an account linking flow.)
-          // Otherwise, we don't create an org identity link since saveAttributes will do that.
-
           $pCoPersonId = $this->CoPetition->field('enrollee_co_person_id', array('CoPetition.id' => $id));
 
           if($pCoPersonId) {
+            // If there is already a CO Person attached to the Petition (from selectEnrollee),
+            // create a CoOrgIdentityLink for that CO Person to this Org Identity.
+            // (This would typically be for an account linking flow.)
+            // Otherwise, we don't create an org identity link since saveAttributes will do that.
+            
             $coOrgLink = array();
             $coOrgLink['CoOrgIdentityLink']['org_identity_id'] = $newOrgId['OrgIdentitySourceRecord']['org_identity_id'];
             $coOrgLink['CoOrgIdentityLink']['co_person_id'] = $pCoPersonId;
@@ -989,11 +1017,28 @@ class CoPetitionsController extends StandardController {
             // CoOrgIdentityLink is not currently provisioner-enabled, but we'll disable
             // provisioning just in case that changes in the future. We'll also ignore
             // any error in the unlikely event there is already a link in place.
+            
             try {
-              if($this->CoPetition->EnrolleeCoPerson->CoOrgIdentityLink->save($coOrgLink, array("provision" => false)));
+              $this->CoPetition->EnrolleeCoPerson->CoOrgIdentityLink->save($coOrgLink, array("provision" => false));
             }
             catch(Exception $e) {
 
+            }
+          } else {
+            // If there is no CO Person in the Petition but there *is* a CO Person linked
+            // to the Org Identity, link the CO Person into the petition. It was probably
+            // created by a Pipeline (probably via an Enrollment Source in authenticate mode).
+            
+            $linkCoPersonId = $this->CoPetition
+                                   ->EnrolleeCoPerson
+                                   ->CoOrgIdentityLink->field('co_person_id',
+                                                              array('CoOrgIdentityLink.org_identity_id' => $newOrgId['OrgIdentitySourceRecord']['org_identity_id']));
+            
+            if($linkCoPersonId) {
+              $this->CoPetition->linkCoPerson($this->cachedEnrollmentFlowID,
+                                              $id,
+                                              $linkCoPersonId,
+                                              $this->Session->read('Auth.User.co_person_id'));
             }
           }
         }
@@ -1013,16 +1058,19 @@ class CoPetitionsController extends StandardController {
         );
         
         // If we're in an unauthenticated flow, we need to append a token.
-        $token = $this->CoPetition->field('petitioner_token', array('CoPetition.id' => $id));
+        $enrolleeToken = $this->CoPetition->field('enrollee_token', array('CoPetition.id' => $id));
+        $petitionerToken = $this->CoPetition->field('petitioner_token', array('CoPetition.id' => $id));
+
+        $steps = $this->CoPetition->CoEnrollmentFlow->configuredSteps($this->enrollmentFlowID());
         
+        if(isset($steps[$action]) && $steps[$action]['role'] == EnrollmentRole::Enrollee) {
+          $token = empty($enrolleeToken) ? $petitionerToken : $enrolleeToken;
+        } else {
+          $token = empty($petitionerToken) ? $enrolleeToken : $petitionerToken;
+        }
+
         if($token) {
           $redirect['token'] = $token;
-        } else {
-          $token = $this->CoPetition->field('enrollee_token', array('CoPetition.id' => $id));
-          
-          if($token) {
-            $redirect['token'] = $token;
-          }
         }
 
         $this->redirect($redirect);
@@ -1539,30 +1587,6 @@ class CoPetitionsController extends StandardController {
                                              $id,
                                              $this->request->params['named']['orgidentityid'],
                                              $this->Session->read('Auth.User.co_person_id'));
-          
-          // If we don't already have a CO Person, and if the OIS was attached
-          // to a pipeline and that pipeline created a CO Person we should attach
-          // that CO Person to the petition.
-          
-          $pCoPersonId = $this->CoPetition->field('enrollee_co_person_id', array('CoPetition.id' => $id));
-          
-          if(!$pCoPersonId) {
-            $pCoPersonId = $this->CoPetition
-                                ->EnrolleeOrgIdentity
-                                ->CoOrgIdentityLink
-                                ->field('co_person_id',
-                                        array('CoOrgIdentityLink.org_identity_id'
-                                              => $this->request->params['named']['orgidentityid']));
-            
-            if($pCoPersonId) {
-              // Link this CO Person ID to the petition
-              
-              $this->CoPetition->linkCoPerson($this->cachedEnrollmentFlowID,
-                                              $id,
-                                              $pCoPersonId,
-                                              $this->Session->read('Auth.User.co_person_id'));
-            }
-          }
         } else {
           // Redirect into the OIS Selector
           
@@ -1729,30 +1753,48 @@ class CoPetitionsController extends StandardController {
    */
   
   protected function execute_sendConfirmation($id) {
-    $this->CoPetition->sendConfirmation($id, $this->Session->read('Auth.User.co_person_id'));
+
+    $ea = $this->CoPetition->needConfirmation($id);
+    if(!empty($ea)) {
+
+      $this->CoPetition->sendConfirmation($id, $ea, $this->Session->read('Auth.User.co_person_id'));
     
-    $this->CoPetition->updateStatus($id,
+      $this->CoPetition->updateStatus($id,
                                     PetitionStatusEnum::PendingConfirmation, 
                                     $this->Session->read('Auth.User.co_person_id'));
     
-    // The step is done
+      // The step is done
     
-    $debug = Configure::read('debug');
+      $debug = Configure::read('debug');
     
-    if(!$debug) {
-      $this->redirect($this->generateDoneRedirect('sendConfirmation', $id));
-    } else {
-      // We need to populate the view var to render the debug link
-      $coInviteId = $this->CoPetition->field('co_invite_id',
+      if(!$debug) {
+        $this->redirect($this->generateDoneRedirect('sendConfirmation', $id));
+      } else {
+        // We need to populate the view var to render the debug link
+        $coInviteId = $this->CoPetition->field('co_invite_id',
                                              array('CoPetition.id' => $id));
       
-      if($coInviteId) {
-        $args = array();
-        $args['conditions']['CoInvite.id'] = $coInviteId;
-        $args['contain'] = false;
+        if($coInviteId) {
+          $args = array();
+          $args['conditions']['CoInvite.id'] = $coInviteId;
+          $args['contain'] = false;
         
-        $this->set('vv_co_invite', $this->CoPetition->CoInvite->find('first', $args));
+          $this->set('vv_co_invite', $this->CoPetition->CoInvite->find('first', $args));
+        }
       }
+    }
+    else {
+
+      // there are no unconfirmed addresses left, directly proceed to processConfirmation
+      $coPersonId = $this->CoPetition->field('enrollee_co_person_id', array('CoPetition.id' => $id));
+      $this->CoPetition->updateStatus($id, PetitionStatusEnum::Confirmed, $coPersonId);
+
+      $redirect = $this->generateDoneRedirect('processConfirmation', $id);
+
+      // we need to switch from PetitionerToken to EnrolleeToken, which is normally done in the
+      // process of sending an invite and confirming it
+      $redirect['token'] = $this->CoPetition->ensureEnrolleeToken($id);
+      $this->redirect($redirect);
     }
   }
   
@@ -1859,6 +1901,11 @@ class CoPetitionsController extends StandardController {
       $ret['coef'] = $this->cachedEnrollmentFlowID;
     }
     
+    if($step == 'start' && !empty($this->request->params['named']['return'])) {
+      // Propagte the return URL since we don't store it until the step is done
+      $ret['return'] = $this->request->params['named']['return'];
+    }
+    
     $token = $this->parseToken();
     
     if($token) {
@@ -1960,6 +2007,11 @@ class CoPetitionsController extends StandardController {
     
     // Edit an existing CO Petition?
     $p['edit'] = false;
+    
+    // We don't allow editing at the moment, but we do allow adding comments.
+    // This permission correlates to CoPetitionHistoryRecords::add
+    $p['addhistory'] = ($roles['cmadmin'] || $roles['coadmin']
+                        || ($canInitiate && $roles['couadmin']));
     
     // Match against existing CO People? If the match policy is Advisory, we
     // allow matching to take place as long as $canInitiate is also true. (Note we don't

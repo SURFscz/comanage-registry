@@ -196,15 +196,13 @@ class EmailAddress extends AppModel {
       
       $curdata = $this->find('first', $args);
       
+      $this->data['EmailAddress']['verified'] = $curdata['EmailAddress']['verified'];
       if(!$trustVerified) {
         if(!empty($curdata['EmailAddress']['mail'])
            && !empty($this->data['EmailAddress']['mail'])
            && $curdata['EmailAddress']['mail'] != $this->data['EmailAddress']['mail']) {
           // Email address was changed, flag as unverified
           $this->data['EmailAddress']['verified'] = false;
-        } else {
-          // Use prior setting
-          $this->data['EmailAddress']['verified'] = $curdata['EmailAddress']['verified'];
         }
       }
       
@@ -294,41 +292,105 @@ class EmailAddress extends AppModel {
     // First find the record
     
     $args = array();
-    if($orgIdentityId) {
-      $args['conditions']['EmailAddress.org_identity_id'] = $orgIdentityId;
-    }
-    if($coPersonId) {
-      $args['conditions']['EmailAddress.co_person_id'] = $coPersonId;
+    // As a temporary workaround for CO-1624, we will accept both an $orgIdentityId
+    // and a $coPersonId, and verify whatever we pull. (This is similar to CO-1651.)
+    // We need to carefully construct the conditions here, though.
+    if($orgIdentityId && $coPersonId) {
+      $args['conditions']['OR'] = array(
+        'EmailAddress.co_person_id' => $coPersonId,
+        'EmailAddress.org_identity_id' => $orgIdentityId
+      );
+    } else {
+      if($orgIdentityId) {
+        $args['conditions']['EmailAddress.org_identity_id'] = $orgIdentityId;
+      } elseif($coPersonId) {
+        $args['conditions']['EmailAddress.co_person_id'] = $coPersonId;
+      }
     }
     $args['conditions']['EmailAddress.mail'] = $address;
+    $args['conditions']['EmailAddress.verified'] = false;
     $args['contain'] = false;
     
-    $mail = $this->find('first', $args);
+    $mails = $this->find('all', $args);
     
-    if(empty($mail)) {
-      throw new InvalidArgumentException(_txt('er.notfound', array(_txt('ct.email_addresses.1'), $address)));
+    if(!empty($mails)) {
+      foreach($mails as $m) {
+        // Mark the address as verified
+        $this->clear();
+        $this->id = $m['EmailAddress']['id'];
+        
+        // Make sure to disable callbacks since beforeSave will try to update this field, too
+        if(!$this->saveField('verified', true, array('callbacks' => false))) {
+          throw new RuntimeException(_txt('er.db.save-a', array('EmailAddress::verify()')));
+        }
+        
+        // Finally, create a history record
+        
+        try {
+          $this->CoPerson->HistoryRecord->record($m['EmailAddress']['co_person_id'],
+                                                 null,
+                                                 $m['EmailAddress']['org_identity_id'],
+                                                 $verifierCoPersonId,
+                                                 ActionEnum::EmailAddressVerified,
+                                                 _txt('rs.mail.verified', array($address)));
+        }
+        catch(Exception $e) {
+          throw new RuntimeException($e->getMessage());
+        }
+      }
     }
-    
-    // And then update it
-    $this->id = $mail['EmailAddress']['id'];
-    
-    // Make sure to disable callbacks since beforeSave will try to update this field, too
-    if(!$this->saveField('verified', true, array('callbacks' => false))) {
-      throw new RuntimeException(_txt('er.db.save'));
+    // else for now we'll fail silently, which is probably not what we really want to do
+  }
+
+  /**
+   * Check for copied email addresses with different verified/unverified statusses
+   *
+   * @since  COmanage Registry vTODO
+   * @param  Array   list of Integer Org Identity IDs
+   * @param  Integer CoPersonId
+   * @throws RuntimeException
+   */
+  public function testVerifiedAddresses($ois, $coPersonId) {
+
+    // When EmailAddress records are copied during enrollment, the verification status is lost. Even if that
+    // were fixed, if a user enters a manual email address that just happens to match with one of the
+    // verified addresses, that address can be considered verified immediately. This could be fixed partially
+    // by changes to the datamodel (making EmailAddress unique for combinations of OrgIdentity and CoPerson),
+    // but all the possible exceptions make that complicated.
+
+    $args=array();
+    if(!empty($ois) && !empty($coPersonId)) {
+      $args['conditions']['OR']['EmailAddress.org_identity_id']=$ois;
+      $args['conditions']['OR']['EmailAddress.co_person_id']=$coPersonId;
+    } else if(!empty($ois)) {
+      $args['conditions']['EmailAddress.org_identity_id']=$ois;
+    } else {
+      $args['conditions']['EmailAddress.co_person_id']=$coPersonId;
     }
-    
-    // Finally, create a history record
-    
-    try {
-      $this->CoPerson->HistoryRecord->record($coPersonId,
-                                             null,
-                                             $orgIdentityId,
-                                             $verifierCoPersonId,
-                                             ActionEnum::EmailAddressVerified,
-                                             _txt('rs.mail.verified', array($address)));
-    }
-    catch(Exception $e) {
-      throw new RuntimeException($e->getMessage());
+    $args['contain']=false;
+
+    $emails = $this->find('all',$args);
+
+    $verifiedAddresses=array();
+    if(!empty($emails)) {
+      foreach($emails as $ea) {
+        if($ea['EmailAddress']['verified']) {
+          $verifiedAddresses[strtolower($ea['EmailAddress']['mail'])] = true;
+        }
+      }
+
+      foreach($emails as $ea) {
+        if(!$ea['EmailAddress']['verified']) {
+
+          if(isset($verifiedAddresses[strtolower($ea['EmailAddress']['mail'])])) {
+            $this->id = $ea['EmailAddress']['id'];
+
+            if(!$this->saveField('verified', true, array('callbacks' => false))) {
+              throw new RuntimeException(_txt('er.db.save'));
+            }
+          }
+        }
+      }
     }
   }
 }

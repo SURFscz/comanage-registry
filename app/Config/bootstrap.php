@@ -2,7 +2,7 @@
 /**
  * This file is loaded automatically by the app/webroot/index.php file after core.php
  *
- * This file should load/create any application wide configuration settings, such as 
+ * This file should load/create any application wide configuration settings, such as
  * Caching, Logging, loading additional configuration files.
  *
  * You should also use this file to include any files that provide global functions/constants
@@ -84,7 +84,13 @@ _bootstrap_plugin_enum();
 include APP."Lib/lang.php";
 include APP."Lib/util.php";
 
-CakePlugin::loadAll();
+// Allow plugins to inject bootstrapping and routes
+// Contrary to the documentation, this needs to be an array of an array
+CakePlugin::loadAll(array(array(
+	'ignoreMissing' => true,
+	'bootstrap' 		=> true,
+	'routes'				=> true
+)));
 
 /**
  * You can attach event listeners to the request lifecyle as Dispatcher Filter . By Default CakePHP bundles two filters:
@@ -121,3 +127,9 @@ CakeLog::config('error', array(
 	'types' => array('warning', 'error', 'critical', 'alert', 'emergency'),
 	'file' => 'error',
 ));
+
+// Cake expects bootstrap.php to hold logging configuations. We allow adding loggers from
+// LOCAL directory so it's easier to migrate across versions.
+// See issue CO-1643
+include(LOCAL . 'Config' . DS . 'bootstrap.php');
+

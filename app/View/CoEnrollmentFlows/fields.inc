@@ -214,19 +214,19 @@
       <?php
         global $cm_lang, $cm_texts;
         $attrs = array();
-        $attrs['value'] = (isset($co_enrollment_flows) ? $co_enrollment_flows[0]['CoEnrollmentFlow']['status'] : EnrollmentFlowStatusEnum::Active);
+        $attrs['value'] = (isset($co_enrollment_flows) ? $co_enrollment_flows[0]['CoEnrollmentFlow']['status'] : TemplateableStatusEnum::Active);
         $attrs['empty'] = false;
 
         if($e) {
           print $this->Form->select('status',
-                                    $cm_texts[ $cm_lang ]['en.status.ef'],
+                                    $cm_texts[ $cm_lang ]['en.status.temp'],
                                     $attrs);
 
           if($this->Form->isFieldError('status')) {
             print $this->Form->error('status');
           }
         } else {
-          print _txt('en.status', null, $co_enrollment_flows[0]['CoEnrollmentFlow']['status']);
+          print _txt('en.status.temp', null, $co_enrollment_flows[0]['CoEnrollmentFlow']['status']);
         }
       ?>
     </div>
@@ -308,6 +308,20 @@
           }
         ?>
       </div>
+    </div>
+  </li>
+  <li>
+    <div class="field-name vtop">
+      <div class="field-title">
+        <?php print _txt('fd.ef.shortcut'); ?>
+      </div>
+      <div class="field-desc"><?php print _txt('fd.ef.shortcut.desc'); ?></div>
+    </div>
+    <div class="field-info checkbox">
+      <?php print ($e
+                   ? $this->Form->input('my_identity_shortcut') . 
+                     $this->Form->label('my_identity_shortcut', _txt('fd.ef.shortcut'))
+                   : ($co_enrollment_flows[0]['CoEnrollmentFlow']['my_identity_shortcut'] ? _txt('fd.yes') : _txt('fd.no'))); ?>
     </div>
   </li>
   <?php if(!empty($vv_co_pipelines)): ?>
@@ -559,18 +573,7 @@
       </li>
     </ul>
   </li>
-  <li>
-    <div class="field-name">
-      <div class="field-title">
-        <?php print ($e ? $this->Form->label('notify_from', _txt('fd.ef.efn')) : _txt('fd.ef.efn')); ?>
-      </div>
-      <div class="field-desc"><?php print _txt('fd.ef.efn.desc'); ?></div>
-    </div>
-    <div class="field-info">
-      <?php print ($e
-                   ? $this->Form->input('notify_from')
-                   : filter_var($co_enrollment_flows[0]['CoEnrollmentFlow']['notify_from'],FILTER_SANITIZE_SPECIAL_CHARS)); ?>
-    </div>
+  <?php print ($e ? $this->Form->input('notify_from', array('type'=>'hidden')) : ""); ?>
   </li>
   <li>
     <div class="field-name">
@@ -886,7 +889,7 @@
     <li class="fields-submit">
       <div class="field-name"></div>
       <div class="field-info">
-        <?php print $this->Form->submit($submit_label, array('onClick' => 'on_submit()')); ?>
+        <?php print $this->Form->submit($submit_label); ?>
       </div>
     </li>
   <?php endif; ?>

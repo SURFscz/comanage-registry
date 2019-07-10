@@ -114,7 +114,7 @@ class CoPeopleController extends StandardController {
       
       $args = array();
       $args['conditions']['CoEnrollmentFlow.co_id'] = $this->cur_co['Co']['id'];
-      $args['conditions']['CoEnrollmentFlow.status'] = EnrollmentFlowStatusEnum::Active;
+      $args['conditions']['CoEnrollmentFlow.status'] = TemplateableStatusEnum::Active;
       $args['contain'] = false;
       
       $this->set('co_enrollment_flows', $this->Co->CoEnrollmentFlow->find('all', $args));
@@ -784,6 +784,11 @@ class CoPeopleController extends StandardController {
     else
       $p['cous'] = array();
     
+
+    // CO-1650: only allow adding email addresses if there are any types set as self-serviceable
+    $email_address_types = $this->CoPerson->EmailAddress->defaultTypes('type');
+    $p['add_emailaddress'] = $p['edit'] && sizeof($email_address_types) > 0;
+
     $this->set('permissions', $p);
     return $p[$this->action];
   }
